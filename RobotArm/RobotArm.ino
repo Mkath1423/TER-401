@@ -94,7 +94,7 @@ void setup() {
 
 bool PresetControls = false;
 void ToggleState(){
-  Serial.print("Toggleing State");
+  Serial.print("Toggling State");
   PresetControls = !PresetControls;
 }
 
