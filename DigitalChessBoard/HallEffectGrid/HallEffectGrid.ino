@@ -20,14 +20,27 @@ void setup() {
 
 int active_column = 0;
 void loop() {
-  SetColumnPower(active_column);
-  
-  for(int i = 0; i != n_rows; i++){
-    Serial.print(String(analogRead(signal_pins[i])) + " ");
+  if(Serial.available()){
+    Serial.readString();
+    Serial.println("Reading Board");
+    Serial.println("---------------------");
+    CheckBoard();
   }
   
-  Serial.println();
+  
   delay(100);
+}
+
+void CheckBoard(){
+  for(int i = 0; i != n_cols; i++){
+    
+    SetColumnPower(i);
+    for(int i = 0; i != n_rows; i++){
+      Serial.print(String(analogRead(signal_pins[i]) < 100) + " ");
+    }
+    Serial.println();
+    SetColumnPower(-1);
+  }
 }
 
 void SetColumnPower(int col){
