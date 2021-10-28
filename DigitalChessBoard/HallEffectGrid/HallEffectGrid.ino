@@ -23,7 +23,7 @@ void loop() {
   if(Serial.available()){
     Serial.readString();
     Serial.println("Reading Board");
-    Serial.println("---------------------");
+    Serial.println("-------------");
     CheckBoard();
   }
   
