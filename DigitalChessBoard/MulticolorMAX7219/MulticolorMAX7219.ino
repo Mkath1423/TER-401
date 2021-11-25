@@ -3,6 +3,7 @@
  */
 #include "Arduino.h"                   // needed to compile with Rel. 0013 WHY?!
 #include "LedControl.h"                 // to drive the matrix
+#include "Wire.h"
 #define ISR_FREQ 190     //190=650Hz    // Sets the speed of the ISR - LOWER IS FASTER
 // prescaler is /128 -  125,000/ISR_FREQ+1 (i.e 249=500Hz, 190=650Hz)
 // Tweaked depending on the overhead in the ISR & and other factors in the sketch
@@ -36,13 +37,29 @@ void setup() {
   for(int i = 0; i != 5; i++){
     pinMode(signal_pins[i], INPUT);
   }
-
+  /*
+  for(int row=0; row != 8;row++) {
+   for(int i =0; i != 8; i += 2){
+    if(row % 2 ==0){
+      SetLed(GREEN, row, i, true);
+      SetLed(BLUE, row, i + 1, true);
+    }
+    else{
+      SetLed(BLUE, row, i, true);
+      SetLed(GREEN, row, i + 1, true);
+    }
+   }
+  }
+  */
+  lc.setLed(GREEN, 0, 0, true);
+  
   Serial.begin(9600);
   Serial.println("Starting");
   startISR();   
 }
 
-String command = "";
+String command = "001102201302";
+String command2 = "002101202301";
 void loop() {
   /*
    stopISR();
@@ -64,25 +81,31 @@ void loop() {
   
   startISR();
   */
-   stopISR();
-  
-   for(int row=0; row != 8;row++) {
-   for(int i =0; i != 8; i += 2){
-    if(row % 2 ==0){
-      SetLed(GREEN, row, i, true);
-      SetLed(BLUE, row, i + 1, true);
-    }
-    else{
-      SetLed(BLUE, row, i, true);
-      SetLed(GREEN, row, i + 1, true);
-    }
-   }
-  }
-  
-  startISR(); 
+  delay(5000);
+  ParseLEDCommand(command);
+
+   
   
   delay(1000);
 }
+
+void ParseLEDCommand(String command){
+  Serial.println(command);
+  for(int i = 0; i<command.length() - 2; i+=3){
+    int color = String(command[i+2]).toInt();
+    int row = String(command[i+1]).toInt();
+    int col = String(command[i]).toInt();
+    Serial.println(String(color) + " " + String(row) + " " + String(col));
+
+    stopISR();
+    lc.setLed(GREEN, row, col, color == GREEN);
+    lc.setLed(RED, row, col, color == RED);
+    lc.setLed(BLUE, row, col, color == BLUE);
+    startISR();
+  }
+}
+
+
 ///////////////////////////Sensor Grid Functions ///////////////////////////
 void CheckBoard(){
   for(int i = 0; i != n_cols; i++){
@@ -92,7 +115,7 @@ void CheckBoard(){
       Serial.print(String(analogRead(signal_pins[i]) < 40) + " ");
       
     }
-    SetColumnPower(-1);
+    SetColumnPower(-1); 
   }
 }
 
