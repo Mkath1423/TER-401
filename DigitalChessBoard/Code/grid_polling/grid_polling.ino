@@ -35,19 +35,21 @@ void loop() {
     else if(command.startsWith("sb")){
       Serial.println("Sending New Position");
        // transmit to device #4
-      String changes = command.substring(4);
-      char buf[changes.length()];
-      
-      changes.toCharArray(buf, changes.length());
+      String changes = command.substring(3);
+      Serial.println(changes);
+      char * buf;
+      buf = (char *)malloc(changes.length()+1);
+      changes.toCharArray(buf, changes.length()+1);
       
       Serial.println(buf);
-      for(int i = 0; i != buf.length(); i++){
+      for(int i = 0; i != changes.length(); i++){
         
         Serial.println(buf[i]);
       }
-      //Wire.beginTransmission(4);
-      //Wire.write(bytes);   // sends one byte  
-      //Wire.endTransmission();    // stop transmitting
+      
+      Wire.beginTransmission(4);
+      Wire.write(buf);   // sends one byte  
+      Wire.endTransmission();    // stop transmitting
     }
     
     command = "";

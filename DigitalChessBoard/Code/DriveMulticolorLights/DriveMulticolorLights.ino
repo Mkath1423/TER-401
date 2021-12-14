@@ -78,10 +78,16 @@ void loop() {
   delay(10);
 }
 
-void ParseLEDCommand(int number){
+void ParseLEDCommand(int amount){
   stopISR();
-  Serial.println(number);
-  String command = "908";
+  String command = "";
+  while(1 < Wire.available())       // loop through all but the last
+  {
+    data += char(Wire.read());           // receive byte as a character
+  }
+  int x = Wire.read();              // receive byte as an integer
+  Serial.println(data);                // print the integer
+  
   startISR();
   if(command == "0"){
     stopISR();
@@ -109,26 +115,6 @@ void ParseLEDCommand(int number){
   
 }
 
-
-///////////////////////////Sensor Grid Functions ///////////////////////////
-void CheckBoard(){
-  for(int i = 0; i != n_cols; i++){
-    
-    SetColumnPower(i);
-    for(int i = 0; i != n_rows; i++){
-      Serial.print(String(analogRead(signal_pins[i]) < 40) + " ");
-      
-    }
-    SetColumnPower(-1); 
-  }
-}
-
-void SetColumnPower(int col){
-  for(int i = 0; i != n_cols; i++){
-    digitalWrite(power_pins[i], i == col ? HIGH : LOW);
-  }
-}
- 
 /////////////////////////////ISR Timer Functions ///////////////////////////
 ISR(TIMER1_COMPA_vect) {  //This ISR toggles shutdown between the 2MAX7221's
   if(activeMax==RED){
