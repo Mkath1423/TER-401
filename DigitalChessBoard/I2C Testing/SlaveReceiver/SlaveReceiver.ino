@@ -26,5 +26,5 @@ void receiveEvent(int howMany)      // this function is registered as an event, 
     Serial.print(c);                // print the character
   }
   int x = Wire.read();              // receive byte as an integer
-  Serial.println(x);                // print the integer
+  //Serial.println(x);                // print the integer
 }

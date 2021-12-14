@@ -9,20 +9,30 @@ void setup()
   Wire.begin();                       // join I2C bus (address optional for master, for now)
   Serial.begin(9600);
 }
+
 /*Main loop**************************************************************************************/
 void loop()
 {
   if(Serial.available()){
-    char buf[200] = {};
-    Serial.readBytes(buf, 200);
-    Serial.println(buf);
-    Wire.beginTransmission(4);          // transmit to device #4
-    Wire.write(buf);                // sends 6 bytes
-    Wire.endTransmission();             // stop transmitting
-  
+    delay(100);
+    int amount = Serial.available();
     
-    Serial.println("found data");                    // incremanting the x varijable by 1 on every pass
-    delay(500);                         // dely before the code is runned again
+    char * data;
+    data = (char *)malloc(amount+1);
+    int i = 0;
+    while(Serial.available()){
+      data[i] = char(Serial.read());
+      i ++;
+    }
+    data[amount] = '\0';
+
+    
+    Serial.write(data);
+    
+    Wire.beginTransmission(4);          // transmit to device #4
+    Wire.write(data);                // sends 6 bytes
+    Wire.endTransmission();             // stop transmitting
+    
   }
   
 }
