@@ -83,10 +83,10 @@ void ParseLEDCommand(int amount){
   String command = "";
   while(1 < Wire.available())       // loop through all but the last
   {
-    data += char(Wire.read());           // receive byte as a character
+    command += char(Wire.read());           // receive byte as a character
   }
   int x = Wire.read();              // receive byte as an integer
-  Serial.println(data);                // print the integer
+  Serial.println(command);                // print the integer
   
   startISR();
   if(command == "0"){
