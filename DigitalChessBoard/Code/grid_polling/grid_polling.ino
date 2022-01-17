@@ -26,25 +26,28 @@ int active_column = 0;
 void loop() {
   if(Serial.available()){
     command = Serial.readString();
-    Serial.println(command);
+    //Serial.println(command);
     if(command.startsWith("rb")){
-      Serial.println("Reading Board");
-      Serial.println("-------------");
+      //Serial.println("Reading Board");
+      //Serial.println("-------------");
       CheckBoard();
     }
+    else if(command.startsWith("echo")){
+      Serial.println("echo");
+    }
     else if(command.startsWith("sb")){
-      Serial.println("Sending New Position");
+     // Serial.println("Sending New Position");
        // transmit to device #4
       String changes = command.substring(3);
-      Serial.println(changes);
+      //Serial.println(changes);
       char * buf;
       buf = (char *)malloc(changes.length()+1);
       changes.toCharArray(buf, changes.length()+1);
       
-      Serial.println(buf);
+      //Serial.println(buf);
       for(int i = 0; i != changes.length(); i++){
         
-        Serial.println(buf[i]);
+        //Serial.println(buf[i]);
       }
       
       Wire.beginTransmission(4);
@@ -59,15 +62,16 @@ void loop() {
 }
 
 void CheckBoard(){
+  String out = "";
   for(int i = 0; i != n_cols; i++){
     
     SetColumnPower(i);
     for(int i = 0; i != n_rows; i++){
-      Serial.print(String(analogRead(signal_pins[i]) < 100) + " ");
+      out += String(analogRead(signal_pins[i]) < 100) + " ";
     }
-    Serial.println();
     SetColumnPower(-1);
   }
+  Serial.println(out);
 }
 
 void SetColumnPower(int col){
