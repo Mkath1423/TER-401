@@ -26,6 +26,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
  * 
  * B LEGS NEED LIFT + KICK REVERSED
  * 
+ * rotator reverse 4 and 8
  * 
  * 
  */
@@ -84,8 +85,8 @@ typedef struct {
 
 
 // Parameters
-const RobotState lower_limit = {{90, 90, 90}, {470, 470, 470}, {90, 90, 120}, {470, 470, 470}};
-const RobotState upper_limit = {{470, 470, 470}, {90, 90, 90}, {470, 400, 470}, {90, 90, 90}};
+const RobotState lower_limit = {{470, 90, 90}, {90, 470, 470}, {90, 470, 400}, {470, 90, 90},};
+const RobotState upper_limit = {{90, 470, 470}, {470, 90, 90}, {470, 90, 120}, {90, 470, 470},};
 
 const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
@@ -93,9 +94,10 @@ const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
 RobotState spider = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
-RobotState cfg_start = {{512, 1024, 0}, {512, 1024, 0}, {512, 1024, 0}, {512, 1024, 0}};
-RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}};
 
+RobotState cfg_start = {{712, 712, 712}, {712, 712, 712}, {712, 712, 712}, {712, 712, 712}};
+RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}};
+/*
 // Speakers
 
 const int Speaker_LF = 8;
@@ -170,17 +172,19 @@ void play_melody(){
 
  
 }
-
+*/
 void setup() {
   Serial.begin(9600);
-
+Serial.println("Started");
   pwm.begin();
   pwm.setOscillatorFrequency(27000000);
   pwm.setPWMFreq(SERVO_FREQ);
 
   Serial.println("Started");
-  Serial.println(start_up_melody[0].duration);
-  initalize_melody(start_up_melody);
+  //Serial.println(start_up_melody[0].duration);
+  //initalize_melody(start_up_melody);
+
+  spider = cfg_start;
 }
 
 
@@ -210,7 +214,9 @@ void loop() {
     }
     else if(command.startsWith("config")){
       String config_mode = Serial.readStringUntil(' ');
+      config_mode.trim();
       if(config_mode == "start"){
+        Serial.println("Going to start config");
         spider = cfg_start;
       }
       else if(config_mode == "big"){
@@ -221,8 +227,8 @@ void loop() {
   }
   
   write_servos();
-  play_melody();
-  delay(10);
+  //play_melody();
+  delay(100);
 }
 
 //https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
@@ -323,20 +329,61 @@ void write_servo(int id, int freq){
   pwm.setPWM(id, 0, freq);
 }
 
+void TEMP_set_config(){
+  pwm.setPWM(Rotator_LF, 0, spider.LeftFront.Rotator);
+  pwm.setPWM(Lift_LF,    0, spider.LeftFront.Lift);
+  pwm.setPWM(Kick_LF,    0, spider.LeftFront.Kick);
+
+  pwm.setPWM(Rotator_LB, 0, spider.LeftBack.Rotator);
+  pwm.setPWM(Lift_LB,    0, spider.LeftBack.Lift);
+  pwm.setPWM(Kick_LB,    0, spider.LeftBack.Kick);
+
+  pwm.setPWM(Rotator_RF, 0, spider.RightFront.Rotator);
+  pwm.setPWM(Lift_RF,    0, spider.RightFront.Lift);
+  pwm.setPWM(Kick_RF,    0, spider.RightFront.Kick);
+
+  pwm.setPWM(Rotator_RB, 0, spider.RightBack.Rotator);
+  pwm.setPWM(Lift_RB,    0, spider.RightBack.Lift);
+  pwm.setPWM(Kick_RB,    0, spider.RightBack.Kick);
+
+  Serial.println("wrote state");
+  print_robot_state();
+
+}
+
 void write_servos(){
   pwm.setPWM(Rotator_LF, 0, map(spider.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
   pwm.setPWM(Lift_LF,    0, map(spider.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
   pwm.setPWM(Kick_LF,    0, map(spider.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
 
-  pwm.setPWM(Rotator_LB, 0, map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftFront.Rotator));
-  pwm.setPWM(Lift_LB,    0, map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftFront.Lift   ));
-  pwm.setPWM(Kick_LB,    0, map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftFront.Kick   ));
+  pwm.setPWM(Rotator_LB, 0, map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftBack.Rotator));
+  pwm.setPWM(Lift_LB,    0, map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftBack.Lift   ));
+  pwm.setPWM(Kick_LB,    0, map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftBack.Kick   ));
 
-  pwm.setPWM(Rotator_RF, 0, map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.LeftFront.Rotator));
-  pwm.setPWM(Lift_RF,    0, map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.LeftFront.Lift   ));
-  pwm.setPWM(Kick_RF,    0, map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.LeftFront.Kick   ));
+  pwm.setPWM(Rotator_RF, 0, map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.RightFront.Rotator));
+  pwm.setPWM(Lift_RF,    0, map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.RightFront.Lift   ));
+  pwm.setPWM(Kick_RF,    0, map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.RightFront.Kick   ));
 
-  pwm.setPWM(Rotator_RB, 0, map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.LeftFront.Rotator));
-  pwm.setPWM(Lift_RB,    0, map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.LeftFront.Lift  ));
-  pwm.setPWM(Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.LeftFront.Kick  ));
+  pwm.setPWM(Rotator_RB, 0, map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.RightBack.Rotator));
+  pwm.setPWM(Lift_RB,    0, map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.RightBack.Lift  ));
+  pwm.setPWM(Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
+
+  
+  Serial.println( map(spider.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
+  Serial.println(map(spider.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
+  Serial.println(map(spider.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
+
+  Serial.println( map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftFront.Rotator));
+  Serial.println( map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftFront.Lift   ));
+  Serial.println( map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftFront.Kick   ));
+
+  Serial.println( map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.LeftFront.Rotator));
+  Serial.println( map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.LeftFront.Lift   ));
+  Serial.println( map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.LeftFront.Kick   ));
+
+  Serial.println( map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.LeftFront.Rotator));
+  Serial.println( map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.LeftFront.Lift  ));
+  Serial.println(map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.LeftFront.Kick  ));
+
+  Serial.println("______________________________");
 }
