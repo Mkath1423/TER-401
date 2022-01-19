@@ -69,6 +69,11 @@ typedef struct  {
   LegPosition RightBack;
 } RobotState;
 
+typedef struct {
+  RobotState frames [4];
+  int frame_delay;
+  bool is_looping;
+}Animation;
 
 typedef struct {
   float x;
@@ -83,9 +88,10 @@ typedef struct {
 
 
 
+
 // Parameters
-const RobotState lower_limit = {{470, 90, 90}, {90, 470, 470}, {90, 470, 400}, {470, 90, 90},};
-const RobotState upper_limit = {{90, 470, 470}, {470, 90, 90}, {470, 90, 120}, {90, 470, 470},};
+const RobotState lower_limit = {{470, 90, 120}, {90, 470, 400}, {90, 470, 380}, {470, 90, 120},};
+const RobotState upper_limit = {{90, 470, 400}, {470, 90, 120}, {470, 90, 140}, {90, 470, 400},};
 
 const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
@@ -94,8 +100,19 @@ const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 RobotState spider = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
 
-RobotState cfg_start = {{712, 712, 712}, {712, 712, 712}, {712, 712, 712}, {712, 712, 712}};
+RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}};
 RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}};
+
+RobotState anim_walk_fwd_1 = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}};
+RobotState anim_walk_fwd_2 = {{512, 512, 512}, {312, 512, 512}, {712, 512, 512}, {512, 512, 512}}; 
+RobotState anim_walk_fwd_3 = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}}; 
+
+RobotState anim_walk_fwd_4 = {{312, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 712, 512}};
+RobotState anim_walk_fwd_5 = {{312, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}}; 
+RobotState anim_walk_fwd_6 = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}}; 
+
+Animation anim_walk_fwd = {{anim_walk_fwd_1, anim_walk_fwd_2, anim_walk_fwd_4, anim_walk_fwd_5}, 100, true};
+
 /*
 // Speakers
 
@@ -174,6 +191,8 @@ void play_melody(){
 */
 
 
+
+
 #include <IRremote.h>
 #include "buttons.h"
 
@@ -196,7 +215,7 @@ void readIR(){
   if(ir_results.value != IR_REDO && ir_results.value != 0){
     ir_value = ir_results.value;
   }
-  else if (ir_results.value == 0)){
+  else if (ir_results.value == 0){
     ir_value = 0;
   }
   /*
@@ -212,6 +231,38 @@ void readIR(){
   ir_results.value = 0;
 }
 
+// ----------------------------- ANIMATION ----------------------------- \\ 
+
+Animation current_animation = {};
+int current_frame_index = 0;
+int next_frame_time = 0;
+
+void set_animation(Animation new_animation){
+  current_animation = new_animation;
+
+  current_frame_index = 0;
+  next_frame_time = 0;
+}
+
+void play_animation(){
+  int current_time = millis();
+
+  if(current_frame_index == 4 && !current_animation.is_looping){
+      return;
+  }
+  else if(current_frame_index == 4 && current_animation.is_looping){
+    current_frame_index = 0;
+  }
+  
+  if(current_time >= next_frame_time){
+      spider = current_animation.frames[current_frame_index];
+
+      current_frame_index += 1;
+      next_frame_time = current_time + current_animation.frame_delay;
+  }
+}
+
+// ------------------------------- SETUP  ------------------------------- \\ 
 
 void setup() {
   Serial.begin(9600);
@@ -228,6 +279,8 @@ Serial.println("Started");
   //initalize_melody(start_up_melody);
 
   spider = cfg_start;
+  
+  set_animation(anim_walk_fwd);
 }
 
 
@@ -362,8 +415,9 @@ void loop() {
       break;
   }
 
-  readIR();
+  play_animation();
   write_servos();
+  readIR();
   //play_melody();
   delay(200);
 }
