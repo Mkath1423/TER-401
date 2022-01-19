@@ -27,8 +27,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
  * B LEGS NEED LIFT + KICK REVERSED
  * 
  * rotator reverse 4 and 8
- * 
- * 
+ *     
  */
 
 const int servo_min = 90;
@@ -173,12 +172,56 @@ void play_melody(){
  
 }
 */
+
+
+#include <IRremote.h>
+#include "buttons.h"
+
+const int RECV_PIN = 4;
+IRrecv irrecv(RECV_PIN);
+decode_results ir_results;
+
+long current_ir_value = 0;
+long last_ir_value = 0;
+
+long ir_value = 0;
+
+void readIR(){
+  irrecv.decode(&ir_results);
+  irrecv.resume();
+  //Serial.println(String(ir_results.value) + " " + String(current_ir_value) + " " + String(last_ir_value));
+
+  // Trigger when down
+  //  set ir_value to 0 to trigger only on down
+  if(ir_results.value != IR_REDO && ir_results.value != 0){
+    ir_value = ir_results.value;
+  }
+  else if (ir_results.value == 0)){
+    ir_value = 0;
+  }
+  /*
+  // Trigger on click only
+  if(ir_results.value != IR_REDO && ir_results.value != 0){
+    ir_value = ir_results.value;
+  }
+  else{
+    ir_value = 0;
+  }
+  */
+  
+  ir_results.value = 0;
+}
+
+
 void setup() {
   Serial.begin(9600);
 Serial.println("Started");
   pwm.begin();
   pwm.setOscillatorFrequency(27000000);
   pwm.setPWMFreq(SERVO_FREQ);
+
+  irrecv.enableIRIn();
+  irrecv.blink13(true);
 
   Serial.println("Started");
   //Serial.println(start_up_melody[0].duration);
@@ -225,10 +268,104 @@ void loop() {
       
     }
   }
-  
+  Serial.println(ir_value);
+  switch(ir_value){
+    case IR_POWER:
+      Serial.println("IR_POWER");
+      break;
+      
+    case IR_MODE:
+      Serial.println("IR_MODE");
+      break;
+      
+    case IR_MUTE:
+      Serial.println("IR_MUTE");
+      break;
+      
+    case IR_PLAY:
+      Serial.println("IR_PLAY");
+      break;
+      
+    case IR_RWD:
+      Serial.println("IR_RWD");
+      break;
+      
+    case IR_FFWD:
+      Serial.println("IR_FFWD");
+      break;
+      
+    case IR_EQ:
+      Serial.println("IR_EQ");
+      break;
+      
+    case IR_MINUS:
+      Serial.println("IR_MINUS");
+      break;
+      
+    case IR_PLUS:
+      Serial.println("IR_PLUS");
+      break;
+      
+    case IR_ZERO:
+      Serial.println("IR_ZERO");
+      break;
+      
+    case IR_TWIST:
+      Serial.println("IR_TWIST");
+      break;
+      
+    case IR_USD:
+      Serial.println("IR_USD");
+      break;
+      
+    case IR_ONE:
+      Serial.println("IR_ONE");
+      break;
+      
+    case IR_TWO:
+      Serial.println("IR_TWO");
+      break;
+      
+    case IR_THREE:
+      Serial.println("IR_THREE");
+      break;
+      
+    case IR_FOUR:
+      Serial.println("IR_FOUR");
+      break;
+      
+    case IR_FIVE:
+      Serial.println("IR_FIVE");
+      break;
+      
+    case IR_SIX:
+      Serial.println("IR_SIX");
+      break;
+      
+    case IR_SEVEN:
+      Serial.println("IR_SEVEN");
+      break;
+      
+    case IR_EIGHT:
+      Serial.println("IR_EIGHT");
+      break;
+      
+    case IR_NINE:
+      Serial.println("IR_NINE");
+      break;
+
+    default:
+      if(ir_value != 0){
+        
+      Serial.println("BAD DATA");
+      }
+      break;
+  }
+
+  readIR();
   write_servos();
   //play_melody();
-  delay(100);
+  delay(200);
 }
 
 //https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
@@ -369,21 +506,5 @@ void write_servos(){
   pwm.setPWM(Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
 
   
-  Serial.println( map(spider.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
-  Serial.println(map(spider.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
-  Serial.println(map(spider.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
 
-  Serial.println( map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftFront.Rotator));
-  Serial.println( map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftFront.Lift   ));
-  Serial.println( map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftFront.Kick   ));
-
-  Serial.println( map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.LeftFront.Rotator));
-  Serial.println( map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.LeftFront.Lift   ));
-  Serial.println( map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.LeftFront.Kick   ));
-
-  Serial.println( map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.LeftFront.Rotator));
-  Serial.println( map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.LeftFront.Lift  ));
-  Serial.println(map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.LeftFront.Kick  ));
-
-  Serial.println("______________________________");
 }
