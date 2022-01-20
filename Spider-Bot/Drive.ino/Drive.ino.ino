@@ -105,30 +105,38 @@ RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 5
 
 // Animations
 #define FRAMES_PER_ANIMATIONS 4
-
+/*
   // walk
 RobotState anim_walk_1 = {{512, 712, 512}, {712, 512, 512}, {712, 712, 512}, {512, 512, 512}};
 RobotState anim_walk_2 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}}; 
 RobotState anim_walk_3 = {{712, 512, 512}, {512, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
 RobotState anim_walk_4 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}}; 
 
-Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 100, true};
+Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 500, true};
+*/
+  // walk
+RobotState anim_walk_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}};
+RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}}; 
+RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}}; 
+RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}}; 
+
+Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
 
   // pace
-RobotState anim_pace_1 = {{512, 712, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}};
-RobotState anim_pace_2 = {{712, 712, 512}, {512, 512, 512}, {712, 712, 512}, {512, 512, 512}}; 
-RobotState anim_pace_3 = {{712, 512, 512}, {512, 712, 512}, {712, 512, 512}, {512, 712, 512}}; 
-RobotState anim_pace_4 = {{512, 512, 512}, {712, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
+RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}};
+RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 512, 512}}; 
+RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}}; 
+RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}}; 
 
 Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
 
   // trot
-RobotState anim_trot_1 = {{512, 712, 512}, {712, 512, 512}, {512, 712, 512}, {712, 712, 512}};
-RobotState anim_trot_2 = {{712, 712, 512}, {512, 512, 512}, {712, 712, 512}, {512, 512, 512}}; 
-RobotState anim_trot_3 = {{712, 512, 512}, {512, 712, 512}, {712, 512, 512}, {512, 712, 512}}; 
-RobotState anim_trot_4 = {{512, 512, 512}, {712, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
+RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}};
+RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}}; 
+RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}}; 
+RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}}; 
 
-Animation anim_pace = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 100, true};
+Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
 
 
 /*
@@ -298,7 +306,7 @@ Serial.println("Started");
 
   spider = cfg_start;
   
-  set_animation(anim_walk_fwd);
+  set_animation(anim_trot);
 }
 
 
