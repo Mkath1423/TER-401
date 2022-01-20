@@ -312,7 +312,17 @@ Serial.println("Started");
 
 // ----------------------------- MAIN LOOP ----------------------------- \\ 
 
+#define SLEEP      1
+#define SLEEP_LOOP 2
+#define AWAKE      3
+#define AWAKE_LOOP 4
+#define WALK       5
+#define WALK_LOOP  6
+#define PACE       7
+#define PACE_LOOP  8
+
 String command = "";
+String state = "sleep";
 void loop() {
   if(Serial.available()){
     command = Serial.readStringUntil(' ');
@@ -347,7 +357,79 @@ void loop() {
       
     }
   }
-  Serial.println(ir_value);
+
+  // STATE MACHINE
+  // ----  SLEEP  ---- \\
+  if(state == SLEEP){
+    current_animation = anim_walk;
+    state = SLEEP_LOOP;
+  }
+  else if(state == SLEEP_LOOP){
+
+    // EXIT CASES
+    else if(ir_value == IR_POWER){
+      state = AWAKE;
+    }
+  }
+  
+  // ----  AWAKE  ---- \\
+  else if(state == AWAKE){
+    current_animation = anim_walk;
+    state = AWAKE_LOOP;
+  }
+  else if(state == AWAKE_LOOP){
+    // EXIT CASES
+    else if(ir_value == IR_POWER){
+      state = ASLEEP;
+    }
+  }
+  
+  // ----  WALK  ---- \\
+  else if(state == WALK){
+    current_animation = anim_walk;
+    state = WALK_LOOP;
+  }
+  else if(state == WALK_LOOP){
+    current_animation = anim_walk;
+    
+    // IR FUNCTIONS + EXIT CASES
+    if(ir_value == IR_PLUS){
+      state = PACE;
+    }
+    else if(ir_value == IR_MINUS){
+      // PLAY ERROR SOUND
+    }
+    else if(ir_value == IR_POWER){
+      state = ASLEEP;
+    }
+    else if(ir_value == IR_PLAY){
+      state = AWAKE;
+    }
+  }
+  
+  // ----  PACE  ---- \\
+  else if(state == PACE){
+    current_animation = anim_pace;
+    state = PACE_LOOP;
+  }
+  else if(state == PACE_LOOP){
+    // IR FUNCTIONS + EXIT CASES
+    if(ir_value = IR_MINUS){
+      state = WALK;
+    }
+    else if(ir_value == IR_PLUS){
+      // PLAY ERROR SOUND
+    }
+    else if(ir_value == IR_POWER){
+      state = ASLEEP;
+    }
+    else if(ir_value == IR_PLAY){
+      state = AWAKE;
+    }
+  }
+  
+  
+  
   switch(ir_value){
     case IR_POWER:
       Serial.println("IR_POWER");
