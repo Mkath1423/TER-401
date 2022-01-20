@@ -103,15 +103,33 @@ RobotState spider = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}};
 RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}};
 
-RobotState anim_walk_fwd_1 = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}};
-RobotState anim_walk_fwd_2 = {{512, 512, 512}, {312, 512, 512}, {712, 512, 512}, {512, 512, 512}}; 
-RobotState anim_walk_fwd_3 = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}}; 
+// Animations
+#define FRAMES_PER_ANIMATIONS 4
 
-RobotState anim_walk_fwd_4 = {{312, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 712, 512}};
-RobotState anim_walk_fwd_5 = {{312, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}}; 
-RobotState anim_walk_fwd_6 = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}}; 
+  // walk
+RobotState anim_walk_1 = {{512, 712, 512}, {712, 512, 512}, {712, 712, 512}, {512, 512, 512}};
+RobotState anim_walk_2 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}}; 
+RobotState anim_walk_3 = {{712, 512, 512}, {512, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
+RobotState anim_walk_4 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}}; 
 
-Animation anim_walk_fwd = {{anim_walk_fwd_1, anim_walk_fwd_2, anim_walk_fwd_4, anim_walk_fwd_5}, 100, true};
+Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 100, true};
+
+  // pace
+RobotState anim_pace_1 = {{512, 712, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}};
+RobotState anim_pace_2 = {{712, 712, 512}, {512, 512, 512}, {712, 712, 512}, {512, 512, 512}}; 
+RobotState anim_pace_3 = {{712, 512, 512}, {512, 712, 512}, {712, 512, 512}, {512, 712, 512}}; 
+RobotState anim_pace_4 = {{512, 512, 512}, {712, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
+
+Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
+
+  // trot
+RobotState anim_trot_1 = {{512, 712, 512}, {712, 512, 512}, {512, 712, 512}, {712, 712, 512}};
+RobotState anim_trot_2 = {{712, 712, 512}, {512, 512, 512}, {712, 712, 512}, {512, 512, 512}}; 
+RobotState anim_trot_3 = {{712, 512, 512}, {512, 712, 512}, {712, 512, 512}, {512, 712, 512}}; 
+RobotState anim_trot_4 = {{512, 512, 512}, {712, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
+
+Animation anim_pace = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 100, true};
+
 
 /*
 // Speakers
