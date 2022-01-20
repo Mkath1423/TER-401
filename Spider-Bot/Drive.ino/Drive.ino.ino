@@ -30,50 +30,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
  *     
  */
 
-const int servo_min = 90;
-const int servo_max = 470;
-const int servo_mid = 280;
 
-const int thigh_length = 1;
-const int calf_length = 1;
-
-const int kick_offset = 45;
-const int lift_offset = 60;
-
-const int Rotator_LF = 0;
-const int Lift_LF = 1;
-const int Kick_LF = 2;
-
-const int Rotator_RF = 4;
-const int Lift_RF = 5;
-const int Kick_RF = 6;
-
-const int Rotator_LB = 8;
-const int Lift_LB = 9;
-const int Kick_LB = 10;
-
-const int Rotator_RB = 12;
-const int Lift_RB = 13;
-const int Kick_RB = 14;
-
-typedef struct  {
-  int Rotator;
-  int Lift;
-  int Kick;
-} LegPosition;
-
-typedef struct  {
-  LegPosition LeftFront;
-  LegPosition RightFront;
-  LegPosition LeftBack;
-  LegPosition RightBack;
-} RobotState;
-
-typedef struct {
-  RobotState frames [4];
-  int frame_delay;
-  bool is_looping;
-}Animation;
 
 typedef struct {
   float x;
@@ -89,135 +46,67 @@ typedef struct {
 
 
 
-// Parameters
-const RobotState lower_limit = {{470, 90, 120}, {90, 470, 400}, {90, 470, 380}, {470, 90, 120},};
-const RobotState upper_limit = {{90, 470, 400}, {470, 90, 120}, {470, 90, 140}, {90, 470, 400},};
-
-const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-
-// Configurations
-
-RobotState spider = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-
-
-RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}};
-RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}};
-
-// Animations
-#define FRAMES_PER_ANIMATIONS 4
-/*
-  // walk
-RobotState anim_walk_1 = {{512, 712, 512}, {712, 512, 512}, {712, 712, 512}, {512, 512, 512}};
-RobotState anim_walk_2 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}}; 
-RobotState anim_walk_3 = {{712, 512, 512}, {512, 712, 512}, {512, 512, 512}, {712, 712, 512}}; 
-RobotState anim_walk_4 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}}; 
-
-Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 500, true};
-*/
-  // walk
-RobotState anim_walk_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}};
-RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}}; 
-RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}}; 
-RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}}; 
-
-Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
-
-  // pace
-RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}};
-RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 512, 512}}; 
-RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}}; 
-RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}}; 
-
-Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
-
-  // trot
-RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}};
-RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}}; 
-RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}}; 
-RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}}; 
-
-Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
-
-
-/*
-// Speakers
-
-const int Speaker_LF = 8;
-const int Speaker_RF = 9;
-const int Speaker_LB = 10;
-const int Speaker_RB = 11;
-
-typedef struct {
-  int root;
-  int first;
-  int second;
-  int third;
-  int duration;
-} Chord;
-
-Chord start_up_melody[4] = {{NOTE_C2, NOTE_F2, NOTE_G2, 0, 4}, {NOTE_A3, NOTE_C3, NOTE_D3, 0, 4}, {NOTE_F2, NOTE_A3, NOTE_C3, 0, 4}, {NOTE_G2, NOTE_B3, NOTE_D3, 0, 4}};
-const float note_delay_time = 1.3;
-
-int next_chord_time = 0;
-Chord active_melody[4] = {{}, {}, {}, {}};
-int current_node = 0;
 
 
 
-void initalize_melody(Chord new_melody [4]){
-  for(int i = 0; i != 4; i++){
-    active_melody[i].root   = new_melody[i].root;
-    active_melody[i].first  = new_melody[i].first;
-    active_melody[i].second = new_melody[i].second;
-    active_melody[i].third  = new_melody[i].third;
-    active_melody[i].duration  = new_melody[i].duration;
-  }
-  current_node = 0;
-  next_chord_time = 0;
+
+
+// ----------------------------- MELODIES ----------------------------- \\ 
+#define SPEARK_PIN 8
+
+typedef struct{
+  int notes [16];
+  int note duration;
+  int number_of_notes;
+} Melody;
+
+// Melody data
+
+Melody mel_example = {};
+
+Melody mel_awake = {};
+Melody mel_sleep = {};
+
+Melody mel_1 = {};
+Melody mel_2 = {};
+Melody mel_3 = {};
+Melody mel_4 = {};
+Melody mel_5 = {};
+Melody mel_6 = {};
+Melody mel_7 = {};
+Melody mel_8 = {};
+Melody mel_9 = {};
+
+// play to stop current melody
+Melody mel_0 = {};
+// Play Melodies
+
+Melody mel_active = {};
+
+int next_note_time = 0;
+int current_note = 0;
+
+void init_melody(Melody mel){
+  mel_active = mel;
+  next_note_time = 0;
+  current_note = 0;
 }
 
 void play_melody(){
-  // Some code from toneMelody example
-  if(current_node != 4){
-  int current_time = millis();
-  if(current_time >= next_chord_time){
-    int note_duration = 4000 /  active_melody[current_node].duration;
-    next_chord_time = note_duration + current_time;
-    Serial.println("Playing Note: " + String(current_node) +" uintil:" + String(active_melody[current_node].duration) + " @" + String(current_time)); 
-     
-    
-    
-    if(active_melody[current_node].root != 0){
-      tone(Speaker_LF, active_melody[current_node].root,   note_duration);
-      Serial.println(active_melody[current_node].root);
+  if(current_note < mel_active.number_of_notes){
+    current_time = millis();
+    if(current_time <= next_note_time){
+      tone(SPEAKER_PIN, mel_active.notes[current_note]);
     }
-  
-    if(active_melody[current_node].first != 0){
-      tone(Speaker_RF, active_melody[current_node].first,  note_duration);
-    } 
-    
-    if(active_melody[current_node].second != 0){
-      tone(Speaker_LB, active_melody[current_node].second, note_duration);
-    } 
-    
-    if(active_melody[current_node].third != 0){
-      tone(Speaker_RB, active_melody[current_node].third,  note_duration);
-    } 
-    
-    current_node ++;
-    noTone(Speaker_LF);
-    noTone(Speaker_RF);
-    noTone(Speaker_LB);
-    noTone(Speaker_RB);
+    current_note ++;
   }
+  else{
+    noTone(SPEAKER_PIN);
   }
-
- 
 }
-*/
 
 
-
+// ----------------------------- INFRA-RED ----------------------------- \\ 
 
 #include <IRremote.h>
 #include "buttons.h"
@@ -234,8 +123,7 @@ long ir_value = 0;
 void readIR(){
   irrecv.decode(&ir_results);
   irrecv.resume();
-  //Serial.println(String(ir_results.value) + " " + String(current_ir_value) + " " + String(last_ir_value));
-
+  
   // Trigger when down
   //  set ir_value to 0 to trigger only on down
   if(ir_results.value != IR_REDO && ir_results.value != 0){
@@ -257,7 +145,100 @@ void readIR(){
   ir_results.value = 0;
 }
 
-// ----------------------------- ANIMATION ----------------------------- \\ 
+// ----------------------------- SERVOS ----------------------------- \\ 
+
+#define servo_min 90
+#define servo_max 470
+#define servo_mid 280
+
+#define thigh_length 1
+#define calf_length  1
+
+#define kick_offset 45
+#define lift_offset 60
+
+#define Rotator_LF 0
+#define Lift_LF    1
+#define Kick_LF    2
+
+#define Rotator_RF 4
+#define Lift_RF    5
+#define Kick_RF    6
+
+#define Rotator_LB 8
+#define Lift_LB    9
+#define Kick_LB    10
+
+#define Rotator_RB 12
+#define Lift_RB    13
+#define Kick_RB    14
+
+#define Neck       15
+
+int Neck_Position = 280;
+
+typedef struct  {
+  int Rotator;
+  int Lift;
+  int Kick;
+} LegPosition;
+
+typedef struct  {
+  LegPosition LeftFront;
+  LegPosition RightFront;
+  LegPosition LeftBack;
+  LegPosition RightBack;
+  int Neck;
+} RobotState;
+
+typedef struct {
+  RobotState frames [4];
+  int frame_delay;
+  bool is_looping;
+}Animation;
+
+// Parameters
+const RobotState lower_limit = {{470, 90, 120}, {90, 470, 400}, {90, 470, 380}, {470, 90, 120}, 280};
+const RobotState upper_limit = {{90, 470, 400}, {470, 90, 120}, {470, 90, 140}, {90, 470, 400}, 280};
+
+const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
+
+// Configurations
+
+RobotState spider = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
+
+
+RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}, 280};
+RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}, 280};
+
+// Animation Data
+#define FRAMES_PER_ANIMATIONS 4
+ 
+  // walk
+RobotState anim_walk_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280};
+RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
+RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
+RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
+
+Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
+
+  // pace
+RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280};
+RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
+RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
+RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
+
+Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
+
+  // trot
+RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280};
+RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
+RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
+RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
+
+Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
+
+// Play Animations
 
 Animation current_animation = {};
 int current_frame_index = 0;
@@ -281,8 +262,11 @@ void play_animation(){
   }
   
   if(current_time >= next_frame_time){
-      spider = current_animation.frames[current_frame_index];
-
+      spider.LeftFront  = current_animation.frames[current_frame_index].LeftFront;
+      spider.RightFront = current_animation.frames[current_frame_index].RightFront;
+      spider.LeftBack   = current_animation.frames[current_frame_index].LeftBack;
+      spider.RightBack  = current_animation.frames[current_frame_index].RightBack;
+      
       current_frame_index += 1;
       next_frame_time = current_time + current_animation.frame_delay;
   }
@@ -393,10 +377,10 @@ void loop() {
     current_animation = anim_walk;
     
     // IR FUNCTIONS + EXIT CASES
-    if(ir_value == IR_PLUS){
+    if(ir_value == IR_FFWD){
       state = PACE;
     }
-    else if(ir_value == IR_MINUS){
+    else if(ir_value == IR_RWD){
       // PLAY ERROR SOUND
     }
     else if(ir_value == IR_POWER){
@@ -414,10 +398,10 @@ void loop() {
   }
   else if(state == PACE_LOOP){
     // IR FUNCTIONS + EXIT CASES
-    if(ir_value = IR_MINUS){
+    if(ir_value = IR_RWD){
       state = WALK;
     }
-    else if(ir_value == IR_PLUS){
+    else if(ir_value == IR_FFWD){
       // PLAY ERROR SOUND
     }
     else if(ir_value == IR_POWER){
@@ -427,102 +411,7 @@ void loop() {
       state = AWAKE;
     }
   }
-  
-  
-  
-  switch(ir_value){
-    case IR_POWER:
-      Serial.println("IR_POWER");
-      break;
-      
-    case IR_MODE:
-      Serial.println("IR_MODE");
-      break;
-      
-    case IR_MUTE:
-      Serial.println("IR_MUTE");
-      break;
-      
-    case IR_PLAY:
-      Serial.println("IR_PLAY");
-      break;
-      
-    case IR_RWD:
-      Serial.println("IR_RWD");
-      break;
-      
-    case IR_FFWD:
-      Serial.println("IR_FFWD");
-      break;
-      
-    case IR_EQ:
-      Serial.println("IR_EQ");
-      break;
-      
-    case IR_MINUS:
-      Serial.println("IR_MINUS");
-      break;
-      
-    case IR_PLUS:
-      Serial.println("IR_PLUS");
-      break;
-      
-    case IR_ZERO:
-      Serial.println("IR_ZERO");
-      break;
-      
-    case IR_TWIST:
-      Serial.println("IR_TWIST");
-      break;
-      
-    case IR_USD:
-      Serial.println("IR_USD");
-      break;
-      
-    case IR_ONE:
-      Serial.println("IR_ONE");
-      break;
-      
-    case IR_TWO:
-      Serial.println("IR_TWO");
-      break;
-      
-    case IR_THREE:
-      Serial.println("IR_THREE");
-      break;
-      
-    case IR_FOUR:
-      Serial.println("IR_FOUR");
-      break;
-      
-    case IR_FIVE:
-      Serial.println("IR_FIVE");
-      break;
-      
-    case IR_SIX:
-      Serial.println("IR_SIX");
-      break;
-      
-    case IR_SEVEN:
-      Serial.println("IR_SEVEN");
-      break;
-      
-    case IR_EIGHT:
-      Serial.println("IR_EIGHT");
-      break;
-      
-    case IR_NINE:
-      Serial.println("IR_NINE");
-      break;
-
-    default:
-      if(ir_value != 0){
-        
-      Serial.println("BAD DATA");
-      }
-      break;
-  }
-
+  c
   play_animation();
   write_servos();
   readIR();
@@ -667,6 +556,6 @@ void write_servos(){
   pwm.setPWM(Lift_RB,    0, map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.RightBack.Lift  ));
   pwm.setPWM(Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
 
-  
+  pwm.setPWM(Neck,       0, map(spider.Neck + fine_offset.Neck, 0, 1024, lower_limit.Neck, upper_limit.Neck  ));
 
 }
