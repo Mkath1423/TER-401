@@ -44,38 +44,33 @@ typedef struct {
 } Vector2;
 
 
-
-
-
-
-
-
-
 // ----------------------------- MELODIES ----------------------------- \\ 
-#define SPEARK_PIN 8
 
 typedef struct{
   int notes [16];
-  int note duration;
+  int lengths [16];
   int number_of_notes;
 } Melody;
 
 // Melody data
+int lengths_awake [16] = {NOTE_DS6, NOTE_DS5, NOTE_AS5, NOTE_GS5, NOTE_DS5, NOTE_DS6, NOTE_AS5};
+int notes_awake [16] = {250, 125, 375, 250, 250, 250, 750};
+Melody mel_awake = {{notes_awake}, {lengths_awake}, 7};
 
-Melody mel_example = {};
 
-Melody mel_awake = {};
-Melody mel_sleep = {};
+int lengths_sleep [16] = {NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4};
+int notes_sleep [16] = {500, 500, 500, 500};
+Melody mel_sleep = {{notes_sleep}, {lengths_sleep}, 4};
 
-Melody mel_1 = {};
-Melody mel_2 = {};
-Melody mel_3 = {};
-Melody mel_4 = {};
-Melody mel_5 = {};
-Melody mel_6 = {};
-Melody mel_7 = {};
-Melody mel_8 = {};
-Melody mel_9 = {};
+Melody mel_1 = {{NOTE_C4}, {750}, 1};
+Melody mel_2 = {{NOTE_D4}, {750}, 1};
+Melody mel_3 = {{NOTE_E4}, {750}, 1};
+Melody mel_4 = {{NOTE_F4}, {750}, 1};
+Melody mel_5 = {{NOTE_G4}, {750}, 1};
+Melody mel_6 = {{NOTE_A5}, {750}, 1};
+Melody mel_7 = {{NOTE_B5}, {750}, 1};
+Melody mel_8 = {{NOTE_C5}, {750}, 1};
+Melody mel_9 = {{NOTE_D4}, {750}, 1};
 
 // play to stop current melody
 Melody mel_0 = {};
@@ -92,16 +87,18 @@ void init_melody(Melody mel){
   current_note = 0;
 }
 
+#define SPEAKER_PIN 8
 void play_melody(){
   if(current_note < mel_active.number_of_notes){
-    current_time = millis();
+    int current_time = millis();
     if(current_time <= next_note_time){
       tone(SPEAKER_PIN, mel_active.notes[current_note]);
     }
     current_note ++;
   }
   else{
-    noTone(SPEAKER_PIN);
+    int pin = SPEAKER_PIN;
+    noTone(pin);
   }
 }
 
@@ -173,7 +170,6 @@ void readIR(){
 #define Lift_RB    13
 #define Kick_RB    14
 
-#define Neck       15
 
 int Neck_Position = 280;
 
@@ -195,7 +191,7 @@ typedef struct {
   RobotState frames [4];
   int frame_delay;
   bool is_looping;
-}Animation;
+}A;
 
 // Parameters
 const RobotState lower_limit = {{470, 90, 120}, {90, 470, 400}, {90, 470, 380}, {470, 90, 120}, 280};
@@ -220,7 +216,7 @@ RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {51
 RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
 RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
 
-Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
+A anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
 
   // pace
 RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280};
@@ -228,7 +224,7 @@ RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {51
 RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
 RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
 
-Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
+A anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
 
   // trot
 RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280};
@@ -236,15 +232,15 @@ RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {71
 RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
 RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
 
-Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
+A anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
 
 // Play Animations
 
-Animation current_animation = {};
+A current_animation = {};
 int current_frame_index = 0;
 int next_frame_time = 0;
 
-void set_animation(Animation new_animation){
+void SetAnimation(int non, A new_animation){
   current_animation = new_animation;
 
   current_frame_index = 0;
@@ -290,7 +286,7 @@ Serial.println("Started");
 
   spider = cfg_start;
   
-  set_animation(anim_trot);
+  //SetAnimation(anim_start);
 }
 
 
@@ -306,7 +302,7 @@ Serial.println("Started");
 #define PACE_LOOP  8
 
 String command = "";
-String state = "sleep";
+int state = 1;
 void loop() {
   if(Serial.available()){
     command = Serial.readStringUntil(' ');
@@ -319,14 +315,14 @@ void loop() {
       int lift = Serial.readStringUntil(' ').toInt();
       int kick = Serial.readStringUntil(' ').toInt();
      
-      set_leg(leg, rotate, lift, kick);
+      //set_leg(leg, rotate, lift, kick);
     }
     else if(command.startsWith("set")){
       int id = Serial.readStringUntil(' ').toInt();
       int freq = Serial.readStringUntil(' ').toInt();
 
       Serial.println("Moving " + String(id) + " to " + String(freq));
-      write_servo(id, freq);
+      //write_servo(id, freq);
     }
     else if(command.startsWith("config")){
       String config_mode = Serial.readStringUntil(' ');
@@ -351,7 +347,7 @@ void loop() {
   else if(state == SLEEP_LOOP){
 
     // EXIT CASES
-    else if(ir_value == IR_POWER){
+    if(ir_value == IR_POWER){
       state = AWAKE;
     }
   }
@@ -363,7 +359,7 @@ void loop() {
   }
   else if(state == AWAKE_LOOP){
     // EXIT CASES
-    else if(ir_value == IR_POWER){
+    if(ir_value == IR_POWER){
       state = ASLEEP;
     }
   }
@@ -411,7 +407,7 @@ void loop() {
       state = AWAKE;
     }
   }
-  c
+  
   play_animation();
   write_servos();
   readIR();
@@ -515,28 +511,6 @@ void set_leg(String leg, int Rotator, int Lift, int Kick){
 
 void write_servo(int id, int freq){
   pwm.setPWM(id, 0, freq);
-}
-
-void TEMP_set_config(){
-  pwm.setPWM(Rotator_LF, 0, spider.LeftFront.Rotator);
-  pwm.setPWM(Lift_LF,    0, spider.LeftFront.Lift);
-  pwm.setPWM(Kick_LF,    0, spider.LeftFront.Kick);
-
-  pwm.setPWM(Rotator_LB, 0, spider.LeftBack.Rotator);
-  pwm.setPWM(Lift_LB,    0, spider.LeftBack.Lift);
-  pwm.setPWM(Kick_LB,    0, spider.LeftBack.Kick);
-
-  pwm.setPWM(Rotator_RF, 0, spider.RightFront.Rotator);
-  pwm.setPWM(Lift_RF,    0, spider.RightFront.Lift);
-  pwm.setPWM(Kick_RF,    0, spider.RightFront.Kick);
-
-  pwm.setPWM(Rotator_RB, 0, spider.RightBack.Rotator);
-  pwm.setPWM(Lift_RB,    0, spider.RightBack.Lift);
-  pwm.setPWM(Kick_RB,    0, spider.RightBack.Kick);
-
-  Serial.println("wrote state");
-  print_robot_state();
-
 }
 
 void write_servos(){
