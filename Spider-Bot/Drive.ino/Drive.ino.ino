@@ -1,10 +1,45 @@
-#include <math.h>
-#include <Servo.h>
+#include <Arduino.h>
 
-#include "pitches.h"
+#include <IRremote.h>
+#include <Servo.h>
 
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
+
+
+#include <math.h>
+
+#include "buttons.h"
+#include "types.h"
+#include "pitches.h"
+
+#define ID_Rotator_LF 0
+#define ID_Lift_LF    1
+#define ID_Kick_LF    2
+
+#define ID_Rotator_RF 4
+#define ID_Lift_RF    5
+#define ID_Kick_RF    6
+
+#define ID_Rotator_LB 8
+#define ID_Lift_LB    9
+#define ID_Kick_LB    10
+
+#define ID_Rotator_RB 12
+#define ID_Lift_RB    13
+#define ID_Kick_RB    14
+
+#define ID_Neck 15
+
+const int SLEEP =  1;
+const int SLEEP_LOOP = 2;
+const int AWAKE = 3;
+const int AWAKE_LOOP = 4;
+const int WALK = 5;
+const int WALK_LOOP = 6;
+const int PACE = 7;
+const int PACE_LOOP  = 8;
+
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
@@ -46,11 +81,6 @@ typedef struct {
 
 // ----------------------------- MELODIES ----------------------------- \\ 
 
-typedef struct{
-  int notes [16];
-  int lengths [16];
-  int number_of_notes;
-} Melody;
 
 // Melody data
 int lengths_awake [16] = {NOTE_DS6, NOTE_DS5, NOTE_AS5, NOTE_GS5, NOTE_DS5, NOTE_DS6, NOTE_AS5};
@@ -91,10 +121,13 @@ void init_melody(Melody mel){
 void play_melody(){
   if(current_note < mel_active.number_of_notes){
     int current_time = millis();
-    if(current_time <= next_note_time){
-      tone(SPEAKER_PIN, mel_active.notes[current_note]);
+    Serial.println(String(current_note) + ' ' + String(current_time) + ' ' + String(next_note_time));
+    
+    if(current_time >= next_note_time){
+      tone(8, mel_active.notes[current_note]);
+      current_note ++;
     }
-    current_note ++;
+    
   }
   else{
     int pin = SPEAKER_PIN;
@@ -105,8 +138,7 @@ void play_melody(){
 
 // ----------------------------- INFRA-RED ----------------------------- \\ 
 
-#include <IRremote.h>
-#include "buttons.h"
+
 
 const int RECV_PIN = 4;
 IRrecv irrecv(RECV_PIN);
@@ -144,54 +176,8 @@ void readIR(){
 
 // ----------------------------- SERVOS ----------------------------- \\ 
 
-#define servo_min 90
-#define servo_max 470
-#define servo_mid 280
-
-#define thigh_length 1
-#define calf_length  1
-
-#define kick_offset 45
-#define lift_offset 60
-
-#define Rotator_LF 0
-#define Lift_LF    1
-#define Kick_LF    2
-
-#define Rotator_RF 4
-#define Lift_RF    5
-#define Kick_RF    6
-
-#define Rotator_LB 8
-#define Lift_LB    9
-#define Kick_LB    10
-
-#define Rotator_RB 12
-#define Lift_RB    13
-#define Kick_RB    14
-
-
 int Neck_Position = 280;
 
-typedef struct  {
-  int Rotator;
-  int Lift;
-  int Kick;
-} LegPosition;
-
-typedef struct  {
-  LegPosition LeftFront;
-  LegPosition RightFront;
-  LegPosition LeftBack;
-  LegPosition RightBack;
-  int Neck;
-} RobotState;
-
-typedef struct {
-  RobotState frames [4];
-  int frame_delay;
-  bool is_looping;
-}A;
 
 // Parameters
 const RobotState lower_limit = {{470, 90, 120}, {90, 470, 400}, {90, 470, 380}, {470, 90, 120}, 280};
@@ -216,7 +202,7 @@ RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {51
 RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
 RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
 
-A anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
+Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
 
   // pace
 RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280};
@@ -224,7 +210,7 @@ RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {51
 RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
 RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
 
-A anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
+Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
 
   // trot
 RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280};
@@ -232,15 +218,15 @@ RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {71
 RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
 RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
 
-A anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
+Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
 
 // Play Animations
 
-A current_animation = {};
+Animation current_animation = {};
 int current_frame_index = 0;
 int next_frame_time = 0;
 
-void SetAnimation(int non, A new_animation){
+void SetAnimation(Animation new_animation, int non){
   current_animation = new_animation;
 
   current_frame_index = 0;
@@ -292,18 +278,11 @@ Serial.println("Started");
 
 // ----------------------------- MAIN LOOP ----------------------------- \\ 
 
-#define SLEEP      1
-#define SLEEP_LOOP 2
-#define AWAKE      3
-#define AWAKE_LOOP 4
-#define WALK       5
-#define WALK_LOOP  6
-#define PACE       7
-#define PACE_LOOP  8
 
 String command = "";
-int state = 1;
+long state = SLEEP;
 void loop() {
+  /*
   if(Serial.available()){
     command = Serial.readStringUntil(' ');
     command.trim();
@@ -337,34 +316,41 @@ void loop() {
       
     }
   }
-
+  */
+  //Serial.println(state);
   // STATE MACHINE
-  // ----  SLEEP  ---- \\
+  // ----  SLEEP  ---- //
   if(state == SLEEP){
     current_animation = anim_walk;
     state = SLEEP_LOOP;
+    init_melody(mel_sleep);
+    Serial.println("sleep");
   }
   else if(state == SLEEP_LOOP){
-
     // EXIT CASES
     if(ir_value == IR_POWER){
       state = AWAKE;
     }
   }
   
-  // ----  AWAKE  ---- \\
+  // ----  AWAKE  ---- //
   else if(state == AWAKE){
     current_animation = anim_walk;
     state = AWAKE_LOOP;
+    init_melody(mel_awake);
+    Serial.println("awake");
   }
   else if(state == AWAKE_LOOP){
     // EXIT CASES
     if(ir_value == IR_POWER){
-      state = ASLEEP;
+      state = SLEEP;
+    }
+    else if(ir_value == IR_PLAY){
+      state = WALK;
     }
   }
   
-  // ----  WALK  ---- \\
+  // ----  WALK  ---- //
   else if(state == WALK){
     current_animation = anim_walk;
     state = WALK_LOOP;
@@ -380,28 +366,29 @@ void loop() {
       // PLAY ERROR SOUND
     }
     else if(ir_value == IR_POWER){
-      state = ASLEEP;
+      state = SLEEP;
     }
     else if(ir_value == IR_PLAY){
       state = AWAKE;
     }
   }
   
-  // ----  PACE  ---- \\
+  // ----  PACE  ---- //
   else if(state == PACE){
     current_animation = anim_pace;
     state = PACE_LOOP;
   }
   else if(state == PACE_LOOP){
     // IR FUNCTIONS + EXIT CASES
-    if(ir_value = IR_RWD){
+    if(ir_value == IR_RWD){
+      //Serial.println("going back");
       state = WALK;
     }
     else if(ir_value == IR_FFWD){
       // PLAY ERROR SOUND
     }
     else if(ir_value == IR_POWER){
-      state = ASLEEP;
+      state = SLEEP;
     }
     else if(ir_value == IR_PLAY){
       state = AWAKE;
@@ -411,7 +398,8 @@ void loop() {
   play_animation();
   write_servos();
   readIR();
-  //play_melody();
+  //Serial.println(ir_value);
+  play_melody();
   delay(200);
 }
 
@@ -443,49 +431,6 @@ void print_robot_state(){
   Serial.println("Kick - " + String(spider.RightBack.Kick) + " ");
 }
 
-// ----------------------- INVERSE KINEMATICS ------------------------ \\ 
-
-double dist3(double x, double y, double z){
-  return sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
-}
-
-double dist3(Vector3 t){
-  return sqrt(pow(t.x, 2) + pow(t.y, 2) + pow(t.z, 2));
-}
-
-double dist2(double x, double y){
-  return sqrt(pow(x, 2) + pow(y, 2));
-}
-
-double dist2(Vector2 t){
-  return sqrt(pow(t.d, 2) + pow(t.z, 2));
-}
-
-
-double cos_law(double a, double b, double c){
-  // find angle opposite to a
-  return degrees(acos((a*a - b*b - c*c) / (2*a*b)));
-}
-
-double * calculate_angles(Vector3 t){
-  
-  double rotator_angle = degrees(atan((abs(t.y))/(abs(t.x))));
-  
-  Vector2 ref = (Vector2){dist2(t.x, t.y), t.z};
-  
-  double delta_d = 1;
-  double hypotenuse = dist3(t.x, t.y, t.z);
-      
-  // calculate lift angle
-  double lift_angle = degrees(atan(ref.z / ref.d) + cos_law(calf_length, thigh_length, hypotenuse)) + lift_offset;
-  
-  // calculate kick angle
-  double kick_angle = 180 - cos_law(hypotenuse, thigh_length, calf_length) + kick_offset;
-  
-  double angles [3] = {rotator_angle, lift_angle, kick_angle};
-  return angles;
-}
-
 // ----------------------------- SERVO CONTROL ----------------------------- \\ 
 
 void set_leg(String leg, int Rotator, int Lift, int Kick){
@@ -514,22 +459,22 @@ void write_servo(int id, int freq){
 }
 
 void write_servos(){
-  pwm.setPWM(Rotator_LF, 0, map(spider.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
-  pwm.setPWM(Lift_LF,    0, map(spider.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
-  pwm.setPWM(Kick_LF,    0, map(spider.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
+  pwm.setPWM(ID_Rotator_LF, 0, map(spider.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
+  pwm.setPWM(ID_Lift_LF,    0, map(spider.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
+  pwm.setPWM(ID_Kick_LF,    0, map(spider.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
 
-  pwm.setPWM(Rotator_LB, 0, map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftBack.Rotator));
-  pwm.setPWM(Lift_LB,    0, map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftBack.Lift   ));
-  pwm.setPWM(Kick_LB,    0, map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftBack.Kick   ));
+  pwm.setPWM(ID_Rotator_LB, 0, map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftBack.Rotator));
+  pwm.setPWM(ID_Lift_LB,    0, map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftBack.Lift   ));
+  pwm.setPWM(ID_Kick_LB,    0, map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftBack.Kick   ));
 
-  pwm.setPWM(Rotator_RF, 0, map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.RightFront.Rotator));
-  pwm.setPWM(Lift_RF,    0, map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.RightFront.Lift   ));
-  pwm.setPWM(Kick_RF,    0, map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.RightFront.Kick   ));
+  pwm.setPWM(ID_Rotator_RF, 0, map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.RightFront.Rotator));
+  pwm.setPWM(ID_Lift_RF,    0, map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.RightFront.Lift   ));
+  pwm.setPWM(ID_Kick_RF,    0, map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.RightFront.Kick   ));
 
-  pwm.setPWM(Rotator_RB, 0, map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.RightBack.Rotator));
-  pwm.setPWM(Lift_RB,    0, map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.RightBack.Lift  ));
-  pwm.setPWM(Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
+  pwm.setPWM(ID_Rotator_RB, 0, map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.RightBack.Rotator));
+  pwm.setPWM(ID_Lift_RB,    0, map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.RightBack.Lift  ));
+  pwm.setPWM(ID_Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
 
-  pwm.setPWM(Neck,       0, map(spider.Neck + fine_offset.Neck, 0, 1024, lower_limit.Neck, upper_limit.Neck  ));
+  pwm.setPWM(ID_Neck,       0, map(spider.Neck + fine_offset.Neck, 0, 1024, lower_limit.Neck, upper_limit.Neck  ));
 
 }
