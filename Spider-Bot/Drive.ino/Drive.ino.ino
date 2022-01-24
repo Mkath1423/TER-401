@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#define IR_USE_TIMER3
 #include <IRremote.h>
 #include <Servo.h>
 
@@ -65,18 +66,78 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
  *     
  */
 
+// ----------------------------- Tones -------------------------------- \\
 
+#define SPEAKER_A 3;
+#define SPEAKER_B 3;
+#define SPEAKER_C 3;
+#define SPEAKER_D 3;
 
-typedef struct {
-  float x;
-  float y;
-  float z;
-} Vector3;
+int compareFreq = 0;
 
-typedef struct {
-  float d;
-  float z;
-} Vector2;
+void compareMatchFrequency(int freq){
+  
+}
+
+void disableTimer()
+{
+  //Disable timer
+  TCCR3A = 0;
+  TCCR3B = 0;
+}
+
+void enableTimer(int freq){
+  cli();
+
+  disableTimer()
+  
+  TCCR3A = 0;
+  TCCR3B = 0;
+
+  TCNT3 = 0;
+
+  OCR3A = func(freq);
+  
+  TCCR3A |= (1 << WGM32);
+  TCCR3B |= (1 << CS01) | (1 << CS00);   
+  TIMSK3 |= (1 << OCIE1A);
+
+  sei();
+}
+
+Chord chd_active_frequencies = {}
+Chord chd_active_ends = {}
+Chord chd_active_counters = {}
+Chore chd_is_active;
+
+ISR(TIMER3_COMPA_vect) // Timer3 interrupt
+{
+  chd_active_counters.a = (chd_active_counters.a + 1 )% chd_active_ends.a;
+  chd_active_counters.b = (chd_active_counters.b + 1 )% chd_active_ends.b;
+  chd_active_counters.c = (chd_active_counters.c + 1 )% chd_active_ends.c;
+  chd_active_counters.d = (chd_active_counters.d + 1 )% chd_active_ends.d;
+
+  if(chd_active_counters.a == 0){
+    chd_is_active.a = !chd_is_active.a;
+    digitalWrite(SPEAKER_A, chd_is_active.a);
+  }
+
+  if(chd_active_counters.b == 0){
+    chd_is_active.b = !chd_is_active.b;
+    digitalWrite(SPEAKER_B, chd_is_active.b);
+  }
+
+  if(chd_active_counters.c == 0){
+    chd_is_active.c = !chd_is_active.c;
+    digitalWrite(SPEAKER_C, chd_is_active.c);
+  }
+
+  if(chd_active_counters.d == 0){
+    chd_is_active.d = !chd_is_active.d;
+    digitalWrite(SPEAKER_D, chd_is_active.d);
+  }
+}
+
 
 
 // ----------------------------- MELODIES ----------------------------- \\ 
@@ -85,12 +146,12 @@ typedef struct {
 // Melody data
 int lengths_awake [16] = {NOTE_DS6, NOTE_DS5, NOTE_AS5, NOTE_GS5, NOTE_DS5, NOTE_DS6, NOTE_AS5};
 int notes_awake [16] = {250, 125, 375, 250, 250, 250, 750};
-Melody mel_awake = {{notes_awake}, {lengths_awake}, 7};
+Melody mel_awake = {{NOTE_DS6, NOTE_DS5, NOTE_AS5, NOTE_GS5, NOTE_DS5, NOTE_DS6, NOTE_AS5}, {250, 125, 375, 250, 250, 250, 750}, 7};
 
 
 int lengths_sleep [16] = {NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4};
 int notes_sleep [16] = {500, 500, 500, 500};
-Melody mel_sleep = {{notes_sleep}, {lengths_sleep}, 4};
+Melody mel_sleep = {{NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4}, {NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4}, 4};
 
 Melody mel_1 = {{NOTE_C4}, {750}, 1};
 Melody mel_2 = {{NOTE_D4}, {750}, 1};
@@ -115,16 +176,18 @@ void init_melody(Melody mel){
   mel_active = mel;
   next_note_time = 0;
   current_note = 0;
+  
+  IrReceiver.stop();
 }
 
 #define SPEAKER_PIN 8
 void play_melody(){
-  if(current_note < mel_active.number_of_notes){
+  if(current_note <= mel_active.number_of_notes){
     int current_time = millis();
-    Serial.println(String(current_note) + ' ' + String(current_time) + ' ' + String(next_note_time));
     
     if(current_time >= next_note_time){
       tone(8, mel_active.notes[current_note]);
+      next_note_time = current_time + mel_active.lengths[current_note];
       current_note ++;
     }
     
@@ -132,6 +195,7 @@ void play_melody(){
   else{
     int pin = SPEAKER_PIN;
     noTone(pin);
+    IrReceiver.start();
   }
 }
 
@@ -140,7 +204,7 @@ void play_melody(){
 
 
 
-const int RECV_PIN = 4;
+const int RECV_PIN = 5;
 IRrecv irrecv(RECV_PIN);
 decode_results ir_results;
 
@@ -156,6 +220,7 @@ void readIR(){
   // Trigger when down
   //  set ir_value to 0 to trigger only on down
   if(ir_results.value != IR_REDO && ir_results.value != 0){
+    Serial.println(ir_results.value);
     ir_value = ir_results.value;
   }
   else if (ir_results.value == 0){
@@ -187,14 +252,12 @@ const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 
 // Configurations
 
-RobotState spider = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
+RobotState cfg_active = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 
 
 RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}, 280};
-RobotState cfg_big = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}, 280};
 
 // Animation Data
-#define FRAMES_PER_ANIMATIONS 4
  
   // walk
 RobotState anim_walk_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280};
@@ -202,7 +265,7 @@ RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {51
 RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
 RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
 
-Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, 200, true};
+Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, {200, 200, 200, 200}, 4, true};
 
   // pace
 RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280};
@@ -210,7 +273,7 @@ RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {51
 RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
 RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
 
-Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, 100, true};
+Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, {100, 100, 100, 100}, 4, true};
 
   // trot
 RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280};
@@ -218,41 +281,48 @@ RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {71
 RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
 RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
 
-Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, 50, true};
+Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, {50, 50, 50, 50}, 4, true};
 
 // Play Animations
 
-Animation current_animation = {};
-int current_frame_index = 0;
+Animation anim_active = {};
+int current_frame = 0;
 int next_frame_time = 0;
 
-void SetAnimation(Animation new_animation, int non){
+void init_animation(Animation new_animation){
   current_animation = new_animation;
-
   current_frame_index = 0;
   next_frame_time = 0;
 }
 
 void play_animation(){
-  int current_time = millis();
-
-  if(current_frame_index == 4 && !current_animation.is_looping){
-      return;
-  }
-  else if(current_frame_index == 4 && current_animation.is_looping){
-    current_frame_index = 0;
-  }
-  
-  if(current_time >= next_frame_time){
-      spider.LeftFront  = current_animation.frames[current_frame_index].LeftFront;
-      spider.RightFront = current_animation.frames[current_frame_index].RightFront;
-      spider.LeftBack   = current_animation.frames[current_frame_index].LeftBack;
-      spider.RightBack  = current_animation.frames[current_frame_index].RightBack;
+  if(current_frame <= anim_active.number_of_frames){
+    int current_time = millis();
+    
+    if(current_time >= next_frame_time){
+      cfg_active.LeftFront  = current_animation.frames[current_frame_index].LeftFront;
+      cfg_active.RightFront = current_animation.frames[current_frame_index].RightFront;
+      cfg_active.LeftBack   = current_animation.frames[current_frame_index].LeftBack;
+      cfg_active.RightBack  = current_animation.frames[current_frame_index].RightBack;
       
-      current_frame_index += 1;
-      next_frame_time = current_time + current_animation.frame_delay;
+      next_frame_time = current_time + anim_active.lengths[current_frame;
+      current_note ++;
+    }
+    
+  }
+  else {
+    if(anim_current.is_looping){
+      current_frame = 0;
+    }
+    else{
+      cfg_active.LeftFront  = cfg_start.LeftFront;
+      cfg_active.RightFront = cfg_start.frames[current_frame_index].RightFront;
+      cfg_active.LeftBack   = cfg_start.frames[current_frame_index].LeftBack;
+      cfg_active.RightBack  = cfg_start.frames[current_frame_index].RightBack;
+    }
   }
 }
+
 
 // ------------------------------- SETUP  ------------------------------- \\ 
 
@@ -270,7 +340,7 @@ Serial.println("Started");
   //Serial.println(start_up_melody[0].duration);
   //initalize_melody(start_up_melody);
 
-  spider = cfg_start;
+  cfg_active = cfg_start;
   
   //SetAnimation(anim_start);
 }
@@ -308,10 +378,10 @@ void loop() {
       config_mode.trim();
       if(config_mode == "start"){
         Serial.println("Going to start config");
-        spider = cfg_start;
+        cfg_active = cfg_start;
       }
       else if(config_mode == "big"){
-        spider = cfg_big;
+        cfg_active = cfg_big;
       }
       
     }
@@ -408,43 +478,57 @@ void loop() {
 // ----------------------------- UTILITY ----------------------------- \\ 
 
 void print_robot_state(){
-  Serial.println("Spider State \n-----------------------------------");
+  Serial.println("Tetra State \n-----------------------------------");
   
   Serial.print("Left Front: ");
-  Serial.print("Roator - " + String(spider.LeftFront.Rotator) + " ");
-  Serial.print("Lift - " + String(spider.LeftFront.Lift) + " ");
-  Serial.println("Kick - " + String(spider.LeftFront.Kick)+ " ");
+  Serial.print("Roator - " + String(cfg_active.LeftFront.Rotator) + " ");
+  Serial.print("Lift - " + String(cfg_active.LeftFront.Lift) + " ");
+  Serial.println("Kick - " + String(cfg_active.LeftFront.Kick)+ " ");
 
   Serial.print("Right Front: ");
-  Serial.print("Roator - " + String(spider.RightFront.Rotator) + " ");
-  Serial.print("Lift - " + String(spider.RightFront.Lift)+ " ");
-  Serial.println("Kick - " + String(spider.RightFront.Kick)+ " ");
+  Serial.print("Roator - " + String(cfg_active.RightFront.Rotator) + " ");
+  Serial.print("Lift - " + String(cfg_active.RightFront.Lift)+ " ");
+  Serial.println("Kick - " + String(cfg_active.RightFront.Kick)+ " ");
   
   Serial.print("Left Back: ");
-  Serial.print("Roator - " + String(spider.LeftBack.Rotator) + " ");
-  Serial.print("Lift - " + String(spider.LeftBack.Lift)+ " ");
-  Serial.println("Kick - " + String(spider.LeftBack.Kick) + " ");
+  Serial.print("Roator - " + String(cfg_active.LeftBack.Rotator) + " ");
+  Serial.print("Lift - " + String(cfg_active.LeftBack.Lift)+ " ");
+  Serial.println("Kick - " + String(cfg_active.LeftBack.Kick) + " ");
 
   Serial.print("Left Back: ");
-  Serial.print("Roator - " + String(spider.RightBack.Rotator) + " ");
-  Serial.print("Lift - " + String(spider.RightBack.Lift) + " ");
-  Serial.println("Kick - " + String(spider.RightBack.Kick) + " ");
+  Serial.print("Roator - " + String(cfg_active.RightBack.Rotator) + " ");
+  Serial.print("Lift - " + String(cfg_active.RightBack.Lift) + " ");
+  Serial.println("Kick - " + String(cfg_active.RightBack.Kick) + " ");
+}
+
+// -------------------------------- MATH ----------------------------------- \\
+
+// Euclidean Algorithm
+//   gcd(a, b, c) = gcd(a, gcd(b, c))
+void gcd(int a, int b){
+    while( b != 0){
+        t = b
+        b = a % b
+        a = t
+    }
+    
+    return a
 }
 
 // ----------------------------- SERVO CONTROL ----------------------------- \\ 
 
 void set_leg(String leg, int Rotator, int Lift, int Kick){
   if(leg == "LF") {
-      spider.LeftFront = {Rotator, Lift, Kick};
+      cfg_active.LeftFront = {Rotator, Lift, Kick};
   }
   else if(leg == "LB") {
-      spider.LeftBack = {Rotator, Lift, Kick};
+      cfg_active.LeftBack = {Rotator, Lift, Kick};
   }
   else if(leg == "RF") {
-      spider.RightFront = {Rotator, Lift, Kick};
+      cfg_active.RightFront = {Rotator, Lift, Kick};
   }
   else if(leg == "RB") {
-      spider.RightFront = {Rotator, Lift, Kick};
+      cfg_active.RightFront = {Rotator, Lift, Kick};
   }
   else {
       Serial.println("Bad Input");
@@ -459,22 +543,22 @@ void write_servo(int id, int freq){
 }
 
 void write_servos(){
-  pwm.setPWM(ID_Rotator_LF, 0, map(spider.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
-  pwm.setPWM(ID_Lift_LF,    0, map(spider.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
-  pwm.setPWM(ID_Kick_LF,    0, map(spider.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
+  pwm.setPWM(ID_Rotator_LF, 0, map(cfg_active.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
+  pwm.setPWM(ID_Lift_LF,    0, map(cfg_active.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
+  pwm.setPWM(ID_Kick_LF,    0, map(cfg_active.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));
 
-  pwm.setPWM(ID_Rotator_LB, 0, map(spider.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftBack.Rotator));
-  pwm.setPWM(ID_Lift_LB,    0, map(spider.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftBack.Lift   ));
-  pwm.setPWM(ID_Kick_LB,    0, map(spider.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftBack.Kick   ));
+  pwm.setPWM(ID_Rotator_LB, 0, map(cfg_active.LeftBack.Rotator + fine_offset.LeftBack.Rotator, 0, 1024,     lower_limit.LeftBack.Rotator,   upper_limit.LeftBack.Rotator));
+  pwm.setPWM(ID_Lift_LB,    0, map(cfg_active.LeftBack.Lift    + fine_offset.LeftBack.Lift, 0, 1024,        lower_limit.LeftBack.Lift,      upper_limit.LeftBack.Lift   ));
+  pwm.setPWM(ID_Kick_LB,    0, map(cfg_active.LeftBack.Kick    + fine_offset.LeftBack.Kick, 0, 1024,        lower_limit.LeftBack.Kick,      upper_limit.LeftBack.Kick   ));
 
-  pwm.setPWM(ID_Rotator_RF, 0, map(spider.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.RightFront.Rotator));
-  pwm.setPWM(ID_Lift_RF,    0, map(spider.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.RightFront.Lift   ));
-  pwm.setPWM(ID_Kick_RF,    0, map(spider.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.RightFront.Kick   ));
+  pwm.setPWM(ID_Rotator_RF, 0, map(cfg_active.RightFront.Rotator + fine_offset.RightFront.Rotator, 0, 1024, lower_limit.RightFront.Rotator, upper_limit.RightFront.Rotator));
+  pwm.setPWM(ID_Lift_RF,    0, map(cfg_active.RightFront.Lift    + fine_offset.RightFront.Lift, 0, 1024,    lower_limit.RightFront.Lift,    upper_limit.RightFront.Lift   ));
+  pwm.setPWM(ID_Kick_RF,    0, map(cfg_active.RightFront.Kick    + fine_offset.RightFront.Kick, 0, 1024,    lower_limit.RightFront.Kick,    upper_limit.RightFront.Kick   ));
 
-  pwm.setPWM(ID_Rotator_RB, 0, map(spider.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.RightBack.Rotator));
-  pwm.setPWM(ID_Lift_RB,    0, map(spider.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.RightBack.Lift  ));
-  pwm.setPWM(ID_Kick_RB,    0, map(spider.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
+  pwm.setPWM(ID_Rotator_RB, 0, map(cfg_active.RightBack.Rotator + fine_offset.RightBack.Rotator, 0, 1024,   lower_limit.RightBack.Rotator,  upper_limit.RightBack.Rotator));
+  pwm.setPWM(ID_Lift_RB,    0, map(cfg_active.RightBack.Lift    + fine_offset.RightBack.Lift, 0, 1024,      lower_limit.RightBack.Lift,     upper_limit.RightBack.Lift  ));
+  pwm.setPWM(ID_Kick_RB,    0, map(cfg_active.RightBack.Kick    + fine_offset.RightBack.Kick, 0, 1024,      lower_limit.RightBack.Kick,     upper_limit.RightBack.Kick  ));
 
-  pwm.setPWM(ID_Neck,       0, map(spider.Neck + fine_offset.Neck, 0, 1024, lower_limit.Neck, upper_limit.Neck  ));
+  pwm.setPWM(ID_Neck,       0, map(cfg_active.Neck + fine_offset.Neck, 0, 1024, lower_limit.Neck, upper_limit.Neck  ));
 
 }

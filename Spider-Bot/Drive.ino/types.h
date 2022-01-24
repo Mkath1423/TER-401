@@ -13,10 +13,18 @@ typedef struct  {
 } RobotState;
 
 typedef struct {
-  RobotState frames [4];
-  int frame_delay;
+  RobotState frames [16];
+  int lengths [16];
+  int number_of_notes;
   bool is_looping;
 }Animation;
+
+typedef struct{
+  int a;
+  int b;
+  int c;
+  int d;
+} Chord;
 
 typedef struct{
   int notes [16];
