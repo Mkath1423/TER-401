@@ -80,13 +80,33 @@ void loop() {
   }
   
   startISR();
+
+  delay(500);
+  ClearMatrix();
+  SetRow(RED, 0, true);
+  delay(500);
+  ClearMatrix();
+  SetRow(RED, 1, true);
+  delay(500);
+  ClearMatrix();
+  SetRow(GREEN, 0, true);
+  delay(500);
+  ClearMatrix();
+  SetRow(GREEN, 1, true);
+  delay(500);
+  ClearMatrix();
+  SetRow(RED, 0, true);
+  delay(500);
+  ClearMatrix();
+  SetRow(RED, 1, true);
+  delay(500);
   */
-  delay(5000);
+  delay(1000);
   ParseLEDCommand(command);
 
-   
-  
   delay(1000);
+  ParseLEDCommand(command2);
+
 }
 
 void ParseLEDCommand(String command){

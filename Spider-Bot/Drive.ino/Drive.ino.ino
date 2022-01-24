@@ -5,6 +5,7 @@
 #include <Servo.h>
 
 #include <Wire.h>
+
 #include <Adafruit_PWMServoDriver.h>
 
 
@@ -67,7 +68,7 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
  */
 
 
-// ----------------------------- MELODIES ----------------------------- \\ 
+// ----------------------------- MELODIES ----------------------------- // 
 
 
 // Melody data
@@ -104,7 +105,7 @@ void init_melody(Melody mel){
   next_note_time = 0;
   current_note = 0;
   
-  IrReceiver.stop();
+  //IrReceiver.stop();
 }
 
 #define SPEAKER_PIN 8
@@ -113,7 +114,7 @@ void play_melody(){
     int current_time = millis();
     
     if(current_time >= next_note_time){
-      tone(8, mel_active.notes[current_note]);
+      //tone(8, mel_active.notes[current_note]);
       next_note_time = current_time + mel_active.lengths[current_note];
       current_note ++;
     }
@@ -121,13 +122,13 @@ void play_melody(){
   }
   else{
     int pin = SPEAKER_PIN;
-    noTone(pin);
-    IrReceiver.start();
+    //noTone(pin);
+    //IrReceiver.start();
   }
 }
 
 
-// ----------------------------- INFRA-RED ----------------------------- \\ 
+// ----------------------------- INFRA-RED ----------------------------- //
 
 
 
@@ -166,7 +167,7 @@ void readIR(){
   ir_results.value = 0;
 }
 
-// ----------------------------- SERVOS ----------------------------- \\ 
+// ----------------------------- SERVOS ----------------------------- //
 
 int Neck_Position = 280;
 
@@ -182,10 +183,17 @@ const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 RobotState cfg_active = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 
 
-RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}, 280};
+
 
 // Animation Data
- 
+
+  // start
+RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}, 280};
+Animation anim_start = {{cfg_start}, {0}, 1, false};
+
+ // end
+
+
   // walk
 RobotState anim_walk_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280};
 RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
@@ -217,15 +225,20 @@ int current_frame = 0;
 int next_frame_time = 0;
 
 void init_animation(Animation new_animation){
+  Serial.println();
   anim_active = new_animation;
   current_frame = 0;
   next_frame_time = 0;
+  Serial.println("init anim");
 }
 
 void play_animation(){
-  if(current_frame <= anim_active.number_of_frames){
-    int current_time = millis();
+  if(anim_active.is_looping && current_frame >= anim_active.number_of_frames){
+      current_frame = 0; 
+    }
+  if(current_frame < anim_active.number_of_frames){
     
+    int current_time = millis();
     if(current_time >= next_frame_time){
       cfg_active.LeftFront  = anim_active.frames[current_frame].LeftFront;
       cfg_active.RightFront = anim_active.frames[current_frame].RightFront;
@@ -237,21 +250,11 @@ void play_animation(){
     }
     
   }
-  else {
-    if(anim_active.is_looping){
-      current_frame = 0;
-    }
-    else{
-      cfg_active.LeftFront  = anim_active.frames[current_frame].LeftFront;
-      cfg_active.RightFront = anim_active.frames[current_frame].RightFront;
-      cfg_active.LeftBack   = anim_active.frames[current_frame].LeftBack;
-      cfg_active.RightBack  = anim_active.frames[current_frame].RightBack;
-    }
-  }
+  
 }
 
 
-// ------------------------------- SETUP  ------------------------------- \\ 
+// ------------------------------- SETUP  ------------------------------- // 
 
 void setup() {
   Serial.begin(9600);
@@ -273,7 +276,7 @@ Serial.println("Started");
 }
 
 
-// ----------------------------- MAIN LOOP ----------------------------- \\ 
+// ----------------------------- MAIN LOOP ----------------------------- // 
 
 
 String command = "";
@@ -318,8 +321,9 @@ void loop() {
   // STATE MACHINE
   // ----  SLEEP  ---- //
   if(state == SLEEP){
-    anim_active = anim_walk;
     state = SLEEP_LOOP;
+    
+    init_animation(anim_start);
     init_melody(mel_sleep);
     Serial.println("sleep");
   }
@@ -332,7 +336,7 @@ void loop() {
   
   // ----  AWAKE  ---- //
   else if(state == AWAKE){
-    anim_active = anim_walk;
+    init_animation(anim_start);
     state = AWAKE_LOOP;
     init_melody(mel_awake);
     Serial.println("awake");
@@ -349,11 +353,12 @@ void loop() {
   
   // ----  WALK  ---- //
   else if(state == WALK){
-    anim_active = anim_walk;
+    init_animation(anim_walk);
     state = WALK_LOOP;
+    
+    Serial.println("walk");
   }
   else if(state == WALK_LOOP){
-    anim_active = anim_walk;
     
     // IR FUNCTIONS + EXIT CASES
     if(ir_value == IR_FFWD){
@@ -372,8 +377,9 @@ void loop() {
   
   // ----  PACE  ---- //
   else if(state == PACE){
-    anim_active = anim_pace;
+    init_animation(anim_pace);
     state = PACE_LOOP;
+    Serial.println("pace");
   }
   else if(state == PACE_LOOP){
     // IR FUNCTIONS + EXIT CASES
@@ -396,13 +402,14 @@ void loop() {
   write_servos();
   readIR();
   //Serial.println(ir_value);
+  //print_robot_state();
   play_melody();
   delay(200);
 }
 
 //https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
 
-// ----------------------------- UTILITY ----------------------------- \\ 
+// ----------------------------- UTILITY ----------------------------- //
 
 void print_robot_state(){
   Serial.println("Tetra State \n-----------------------------------");
@@ -428,7 +435,7 @@ void print_robot_state(){
   Serial.println("Kick - " + String(cfg_active.RightBack.Kick) + " ");
 }
 
-// ----------------------------- SERVO CONTROL ----------------------------- \\ 
+// ----------------------------- SERVO CONTROL ----------------------------- // 
 
 void set_leg(String leg, int Rotator, int Lift, int Kick){
   if(leg == "LF") {
