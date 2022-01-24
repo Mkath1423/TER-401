@@ -1,0 +1,135 @@
+### LEG POSITIONS ###
+https://vimeo.com/215637283
+LF AND RF
+u - {0,    +200, 0}
+f - {+200, +200, 0}
+d - {+200,  0  , 0}
+b - { 0,    0  , 0}
+
+LB AND RB
+u - {0,    +200, 0}
+f - {-200, +200, 0}
+d - {-200,  0  , 0}
+b - { 0,    0  , 0}
+
+
+### Walking ###
+--------------
+diagonal move in sycopated unison
+rl pairs swap so that one is forward and one is back
+
+UP-FORWARD-DOWN-BACK
+--------------
+ENTRY FROM REST
+
+LF r RF r
+LB r RB r
+
+LF 1 RF r
+LB r RB r
+
+LF 2 RF 4
+LB r RB 1
+
+LF 3 RF 1
+LB 4 RB 2
+
+LF 4 RF 2
+LB 1 RB 3
+
+------------------------------------
+ANIMATION LOOP
+
+LF 1 RF 3	LF u RF d
+LB 2 RB 4	LB f RB b
+
+LF 2 RF 4	LF f RF b
+LB 3 RB 1	LB d RB u
+
+LF 3 RF 1	LF d RF u
+LB 4 RB 2	LB b RB f
+
+LF 4 RF 2	LF b RF f
+LB 1 RB 3	LB u RB d
+
+
+
+### Pacing ###
+---------------------------------
+UP-FORWARD-DOWN-BACK
+
+fb pairs are in sync
+
+--------------
+ENTRY FROM REST
+
+LF r RF r	LF u RF r
+LB r RB r	LF u RF r
+
+LF 1 RF r	LF f RF b
+LB 1 RB r	LF f RF b
+
+LF 2 RF 4	LF d RF u
+LB 2 RB 1	LF d RF u
+
+LF 3 RF 1	LF b RF f
+LB 2 RB 2	LF b RF f
+
+LF 4 RF 2	LF u RF d
+LB 2 RB 3	LF u RF d
+
+------------------------------------
+ANIMATION LOOP
+
+LF 1 RF 3	LF u RF d
+LB 1 RB 3	LB u RB d
+
+LF 2 RF 4	LF f RF b
+LB 2 RB 4	LB f RB b
+
+LF 3 RF 1	LF d RF u
+LB 3 RB 1	LB d RB u
+
+LF 4 RF 2	LF b RF f
+LB 4 RB 2	LB b RB f
+
+### Walking ###
+--------------
+diagonal move in sycopated unison
+rl pairs swap so that one is forward and one is back
+
+UP-FORWARD-DOWN-BACK
+--------------
+ENTRY FROM REST
+
+LF r RF r
+LB r RB r
+
+LF 1 RF r
+LB r RB r
+
+LF 2 RF 4
+LB r RB 1
+
+LF 3 RF 1
+LB 4 RB 2
+
+LF 4 RF 2
+LB 1 RB 3
+
+------------------------------------
+ANIMATION LOOP
+
+LF 1 RF 3	LF u RF d
+LB 2 RB 4	LB f RB b
+
+LF 2 RF 4	LF f RF b
+LB 3 RB 1	LB d RB u
+
+LF 3 RF 1	LF d RF u
+LB 4 RB 2	LB b RB f
+
+LF 4 RF 2	LF b RF f
+LB 1 RB 3	LB u RB d
+
+
