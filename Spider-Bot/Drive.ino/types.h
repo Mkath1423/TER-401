@@ -15,12 +15,12 @@ typedef struct  {
 typedef struct {
   RobotState frames [16];
   int lengths [16];
-  int number_of_notes;
+  int number_of_frames;
   bool is_looping;
 }Animation;
 
 typedef struct{
-  Chord notes [16];
+  int notes [16];
   int lengths [16];
   int number_of_notes;
 } Melody;

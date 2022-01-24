@@ -68,75 +68,48 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 // ----------------------------- Tones -------------------------------- \\
 
-#define SPEAKER_A 8;
-#define SPEAKER_B 9;
-#define SPEAKER_C 3;
-#define SPEAKER_D 3;
+#define SPEAKER_PIN 8
 
-int compareFreq = 0;
+bool note_is_active = false;
 
 int compareMatchFrequency(int run_frequency){
-
-  return (16000000 / (8 * run_frequency * 2)) -1
+  return (16000000 / (1024 * run_frequency * 2)) -1;
 }
 
-void disableTimer()
+void disableTone()
 {
   //Disable timer
   TCCR3A = 0;
   TCCR3B = 0;
 }
 
-void enableTimer(int freq){
+void enableTone(int freq){
   cli();
 
-  disableTimer()
+  digitalWrite(SPEAKER_PIN, LOW);
+
+  note_is_active = false;
   
   TCCR3A = 0;
   TCCR3B = 0;
 
   TCNT3 = 0;
 
-  OCR3A = compareMatchFrequency(freq);
+  OCR3B = compareMatchFrequency(freq);
   
   TCCR3A |= (1 << WGM32);
-  TCCR3B |= (1 << CS01) | (1 << CS00);   
+  TCCR3B |= (1 << CS32) | (1 << CS30);  
   TIMSK3 |= (1 << OCIE1A);
 
   sei();
 }
 
-Chord chd_active_frequencies = {}
-Chord chd_active_ends = {}
-Chord chd_active_counters = {}
-Chore chd_is_active;
 
-ISR(TIMER3_COMPA_vect) // Timer3 interrupt
+
+ISR(TIMER3_COMPB_vect) // Timer3 interrupt
 {
-  chd_active_counters.a = (chd_active_counters.a + 1 )% chd_active_ends.a;
-  chd_active_counters.b = (chd_active_counters.b + 1 )% chd_active_ends.b;
-  chd_active_counters.c = (chd_active_counters.c + 1 )% chd_active_ends.c;
-  chd_active_counters.d = (chd_active_counters.d + 1 )% chd_active_ends.d;
-
-  if(chd_active_frequencies.a != 0 && chd_active_counters.a == 0){
-    chd_is_active.a = !chd_is_active.a;
-    digitalWrite(SPEAKER_A, chd_is_active.a);
-  }
-
-  if(chd_active_frequencies.b != 0 && chd_active_counters.b == 0){
-    chd_is_active.b = !chd_is_active.b;
-    digitalWrite(SPEAKER_B, chd_is_active.b);
-  }
-
-  if(chd_active_frequencies.c != 0 && chd_active_counters.c == 0){
-    chd_is_active.c = !chd_is_active.c;
-    digitalWrite(SPEAKER_C, chd_is_active.c);
-  }
-
-  if(chd_active_frequencies.d != 0 && chd_active_counters.d == 0){
-    chd_is_active.d = !chd_is_active.d;
-    digitalWrite(SPEAKER_D, chd_is_active.d);
-  }
+  note_is_active = !note_is_active;
+  digitalWrite(SPEAKER_PIN, note_is_active);
 }
 
 
@@ -178,25 +151,24 @@ void init_melody(Melody mel){
   next_note_time = 0;
   current_note = 0;
   
-  IrReceiver.stop();
+  //IrReceiver.stop();
 }
 
-#define SPEAKER_PIN 8
 void play_melody(){
   if(current_note <= mel_active.number_of_notes){
     int current_time = millis();
     
     if(current_time >= next_note_time){
-      tone(8, mel_active.notes[current_note]);
+      disableTone();
+      enableTone(mel_active.notes[current_note]);
       next_note_time = current_time + mel_active.lengths[current_note];
       current_note ++;
     }
     
   }
   else{
-    int pin = SPEAKER_PIN;
-    noTone(pin);
-    IrReceiver.start();
+    disableTone();
+    //IrReceiver.start();
   }
 }
 
@@ -291,8 +263,8 @@ int current_frame = 0;
 int next_frame_time = 0;
 
 void init_animation(Animation new_animation){
-  current_animation = new_animation;
-  current_frame_index = 0;
+  anim_active = new_animation;
+  current_frame = 0;
   next_frame_time = 0;
 }
 
@@ -301,25 +273,25 @@ void play_animation(){
     int current_time = millis();
     
     if(current_time >= next_frame_time){
-      cfg_active.LeftFront  = current_animation.frames[current_frame_index].LeftFront;
-      cfg_active.RightFront = current_animation.frames[current_frame_index].RightFront;
-      cfg_active.LeftBack   = current_animation.frames[current_frame_index].LeftBack;
-      cfg_active.RightBack  = current_animation.frames[current_frame_index].RightBack;
+      cfg_active.LeftFront  = anim_active.frames[current_frame].LeftFront;
+      cfg_active.RightFront = anim_active.frames[current_frame].RightFront;
+      cfg_active.LeftBack   = anim_active.frames[current_frame].LeftBack;
+      cfg_active.RightBack  = anim_active.frames[current_frame].RightBack;
       
-      next_frame_time = current_time + anim_active.lengths[current_frame;
+      next_frame_time = current_time + anim_active.lengths[current_frame];
       current_note ++;
     }
     
   }
   else {
-    if(anim_current.is_looping){
+    if(anim_active.is_looping){
       current_frame = 0;
     }
     else{
-      cfg_active.LeftFront  = cfg_start.LeftFront;
-      cfg_active.RightFront = cfg_start.frames[current_frame_index].RightFront;
-      cfg_active.LeftBack   = cfg_start.frames[current_frame_index].LeftBack;
-      cfg_active.RightBack  = cfg_start.frames[current_frame_index].RightBack;
+      cfg_active.LeftFront  = anim_active.frames[current_frame].LeftFront;
+      cfg_active.RightFront = anim_active.frames[current_frame].RightFront;
+      cfg_active.LeftBack   = anim_active.frames[current_frame].LeftBack;
+      cfg_active.RightBack  = anim_active.frames[current_frame].RightBack;
     }
   }
 }
@@ -392,7 +364,7 @@ void loop() {
   // STATE MACHINE
   // ----  SLEEP  ---- //
   if(state == SLEEP){
-    current_animation = anim_walk;
+    anim_active = anim_walk;
     state = SLEEP_LOOP;
     init_melody(mel_sleep);
     Serial.println("sleep");
@@ -406,7 +378,7 @@ void loop() {
   
   // ----  AWAKE  ---- //
   else if(state == AWAKE){
-    current_animation = anim_walk;
+    anim_active = anim_walk;
     state = AWAKE_LOOP;
     init_melody(mel_awake);
     Serial.println("awake");
@@ -423,11 +395,10 @@ void loop() {
   
   // ----  WALK  ---- //
   else if(state == WALK){
-    current_animation = anim_walk;
+    anim_active = anim_walk;
     state = WALK_LOOP;
   }
   else if(state == WALK_LOOP){
-    current_animation = anim_walk;
     
     // IR FUNCTIONS + EXIT CASES
     if(ir_value == IR_FFWD){
@@ -446,7 +417,7 @@ void loop() {
   
   // ----  PACE  ---- //
   else if(state == PACE){
-    current_animation = anim_pace;
+    anim_active = anim_pace;
     state = PACE_LOOP;
   }
   else if(state == PACE_LOOP){
@@ -502,25 +473,7 @@ void print_robot_state(){
   Serial.println("Kick - " + String(cfg_active.RightBack.Kick) + " ");
 }
 
-// -------------------------------- MATH ----------------------------------- \\
 
-// Euclidean Algorithm
-//   gcd(a, b, c) = gcd(a, gcd(b, c))
-int gcd(int a, int b){
-    while( b != 0){
-        t = b
-        b = a % b
-        a = t
-    }
-    
-    return a
-}
-
-// Euclidean Algorithm
-//   lcm(a, b, c) = lcm(a, lcm(b, c))
-int lcm(int a, int b){
-    return (a * b) / gcd(a, b)
-}
 // ----------------------------- SERVO CONTROL ----------------------------- \\ 
 
 void set_leg(String leg, int Rotator, int Lift, int Kick){
