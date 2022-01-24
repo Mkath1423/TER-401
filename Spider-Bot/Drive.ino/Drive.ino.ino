@@ -72,8 +72,8 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 bool note_is_active = false;
 
-int compareMatchFrequency(int run_frequency){
-  return (16000000 / (1024 * run_frequency * 2)) -1;
+long compareMatchFrequency(int run_frequency){
+  return round(62500 / run_frequency) -1;
 }
 
 void disableTone()
@@ -86,7 +86,7 @@ void disableTone()
 void enableTone(int freq){
   cli();
 
-  digitalWrite(SPEAKER_PIN, LOW);
+  digitalWrite(8, LOW);
 
   note_is_active = false;
   
@@ -96,10 +96,13 @@ void enableTone(int freq){
   TCNT3 = 0;
 
   OCR3B = compareMatchFrequency(freq);
-  
+
+  Serial.print(freq);
+  Serial.print(" ");
+  Serial.println(compareMatchFrequency(freq));
   TCCR3A |= (1 << WGM32);
-  TCCR3B |= (1 << CS32) | (1 << CS30);  
-  TIMSK3 |= (1 << OCIE1A);
+  TCCR3B |= (1 << CS32);  
+  TIMSK3 |= (1 << OCIE3B);
 
   sei();
 }
@@ -109,7 +112,8 @@ void enableTone(int freq){
 ISR(TIMER3_COMPB_vect) // Timer3 interrupt
 {
   note_is_active = !note_is_active;
-  digitalWrite(SPEAKER_PIN, note_is_active);
+  digitalWrite(8, note_is_active);
+  Serial.println(note_is_active);
 }
 
 
@@ -156,10 +160,11 @@ void init_melody(Melody mel){
 
 void play_melody(){
   if(current_note <= mel_active.number_of_notes){
+    
     int current_time = millis();
     
     if(current_time >= next_note_time){
-      disableTone();
+      Serial.println(current_note);
       enableTone(mel_active.notes[current_note]);
       next_note_time = current_time + mel_active.lengths[current_note];
       current_note ++;
@@ -279,7 +284,7 @@ void play_animation(){
       cfg_active.RightBack  = anim_active.frames[current_frame].RightBack;
       
       next_frame_time = current_time + anim_active.lengths[current_frame];
-      current_note ++;
+      current_frame ++;
     }
     
   }
