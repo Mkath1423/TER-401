@@ -66,57 +66,6 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
  *     
  */
 
-// ----------------------------- Tones -------------------------------- \\
-
-#define SPEAKER_PIN 8
-
-bool note_is_active = false;
-
-long compareMatchFrequency(int run_frequency){
-  return round(62500 / run_frequency) -1;
-}
-
-void disableTone()
-{
-  //Disable timer
-  TCCR3A = 0;
-  TCCR3B = 0;
-}
-
-void enableTone(int freq){
-  cli();
-
-  digitalWrite(8, LOW);
-
-  note_is_active = false;
-  
-  TCCR3A = 0;
-  TCCR3B = 0;
-
-  TCNT3 = 0;
-
-  OCR3B = compareMatchFrequency(freq);
-
-  Serial.print(freq);
-  Serial.print(" ");
-  Serial.println(compareMatchFrequency(freq));
-  TCCR3A |= (1 << WGM32);
-  TCCR3B |= (1 << CS32);  
-  TIMSK3 |= (1 << OCIE3B);
-
-  sei();
-}
-
-
-
-ISR(TIMER3_COMPB_vect) // Timer3 interrupt
-{
-  note_is_active = !note_is_active;
-  digitalWrite(8, note_is_active);
-  Serial.println(note_is_active);
-}
-
-
 
 // ----------------------------- MELODIES ----------------------------- \\ 
 
@@ -155,25 +104,25 @@ void init_melody(Melody mel){
   next_note_time = 0;
   current_note = 0;
   
-  //IrReceiver.stop();
+  IrReceiver.stop();
 }
 
+#define SPEAKER_PIN 8
 void play_melody(){
   if(current_note <= mel_active.number_of_notes){
-    
     int current_time = millis();
     
     if(current_time >= next_note_time){
-      Serial.println(current_note);
-      enableTone(mel_active.notes[current_note]);
+      tone(8, mel_active.notes[current_note]);
       next_note_time = current_time + mel_active.lengths[current_note];
       current_note ++;
     }
     
   }
   else{
-    disableTone();
-    //IrReceiver.start();
+    int pin = SPEAKER_PIN;
+    noTone(pin);
+    IrReceiver.start();
   }
 }
 
@@ -404,6 +353,7 @@ void loop() {
     state = WALK_LOOP;
   }
   else if(state == WALK_LOOP){
+    anim_active = anim_walk;
     
     // IR FUNCTIONS + EXIT CASES
     if(ir_value == IR_FFWD){
@@ -477,7 +427,6 @@ void print_robot_state(){
   Serial.print("Lift - " + String(cfg_active.RightBack.Lift) + " ");
   Serial.println("Kick - " + String(cfg_active.RightBack.Kick) + " ");
 }
-
 
 // ----------------------------- SERVO CONTROL ----------------------------- \\ 
 
