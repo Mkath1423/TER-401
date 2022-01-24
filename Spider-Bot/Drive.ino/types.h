@@ -20,14 +20,7 @@ typedef struct {
 }Animation;
 
 typedef struct{
-  int a;
-  int b;
-  int c;
-  int d;
-} Chord;
-
-typedef struct{
-  int notes [16];
+  Chord notes [16];
   int lengths [16];
   int number_of_notes;
 } Melody;

@@ -68,15 +68,16 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 // ----------------------------- Tones -------------------------------- \\
 
-#define SPEAKER_A 3;
-#define SPEAKER_B 3;
+#define SPEAKER_A 8;
+#define SPEAKER_B 9;
 #define SPEAKER_C 3;
 #define SPEAKER_D 3;
 
 int compareFreq = 0;
 
-void compareMatchFrequency(int freq){
-  
+int compareMatchFrequency(int run_frequency){
+
+  return (16000000 / (8 * run_frequency * 2)) -1
 }
 
 void disableTimer()
@@ -96,7 +97,7 @@ void enableTimer(int freq){
 
   TCNT3 = 0;
 
-  OCR3A = func(freq);
+  OCR3A = compareMatchFrequency(freq);
   
   TCCR3A |= (1 << WGM32);
   TCCR3B |= (1 << CS01) | (1 << CS00);   
@@ -117,22 +118,22 @@ ISR(TIMER3_COMPA_vect) // Timer3 interrupt
   chd_active_counters.c = (chd_active_counters.c + 1 )% chd_active_ends.c;
   chd_active_counters.d = (chd_active_counters.d + 1 )% chd_active_ends.d;
 
-  if(chd_active_counters.a == 0){
+  if(chd_active_frequencies.a != 0 && chd_active_counters.a == 0){
     chd_is_active.a = !chd_is_active.a;
     digitalWrite(SPEAKER_A, chd_is_active.a);
   }
 
-  if(chd_active_counters.b == 0){
+  if(chd_active_frequencies.b != 0 && chd_active_counters.b == 0){
     chd_is_active.b = !chd_is_active.b;
     digitalWrite(SPEAKER_B, chd_is_active.b);
   }
 
-  if(chd_active_counters.c == 0){
+  if(chd_active_frequencies.c != 0 && chd_active_counters.c == 0){
     chd_is_active.c = !chd_is_active.c;
     digitalWrite(SPEAKER_C, chd_is_active.c);
   }
 
-  if(chd_active_counters.d == 0){
+  if(chd_active_frequencies.d != 0 && chd_active_counters.d == 0){
     chd_is_active.d = !chd_is_active.d;
     digitalWrite(SPEAKER_D, chd_is_active.d);
   }
@@ -505,7 +506,7 @@ void print_robot_state(){
 
 // Euclidean Algorithm
 //   gcd(a, b, c) = gcd(a, gcd(b, c))
-void gcd(int a, int b){
+int gcd(int a, int b){
     while( b != 0){
         t = b
         b = a % b
@@ -515,6 +516,11 @@ void gcd(int a, int b){
     return a
 }
 
+// Euclidean Algorithm
+//   lcm(a, b, c) = lcm(a, lcm(b, c))
+int lcm(int a, int b){
+    return (a * b) / gcd(a, b)
+}
 // ----------------------------- SERVO CONTROL ----------------------------- \\ 
 
 void set_leg(String leg, int Rotator, int Lift, int Kick){
