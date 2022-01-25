@@ -72,27 +72,12 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 
 // Melody data
-int lengths_awake [16] = {NOTE_DS6, NOTE_DS5, NOTE_AS5, NOTE_GS5, NOTE_DS5, NOTE_DS6, NOTE_AS5};
-int notes_awake [16] = {250, 125, 375, 250, 250, 250, 750};
+
 Melody mel_awake = {{NOTE_DS6, NOTE_DS5, NOTE_AS5, NOTE_GS5, NOTE_DS5, NOTE_DS6, NOTE_AS5}, {250, 125, 375, 250, 250, 250, 750}, 7};
+Melody mel_sleep = {{NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4}, {500, 500, 500, 500}, 4};
+Melody mel_error = {{NOTE_C5, NOTE_A4}, {125, 125}, 2};
+Melody mel_ping = {{NOTE_C5, NOTE_E5}, {125, 125}, 2};
 
-
-int lengths_sleep [16] = {NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4};
-int notes_sleep [16] = {500, 500, 500, 500};
-Melody mel_sleep = {{NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4}, {NOTE_GS5, NOTE_DS5, NOTE_GS4, NOTE_AS4}, 4};
-
-Melody mel_1 = {{NOTE_C4}, {750}, 1};
-Melody mel_2 = {{NOTE_D4}, {750}, 1};
-Melody mel_3 = {{NOTE_E4}, {750}, 1};
-Melody mel_4 = {{NOTE_F4}, {750}, 1};
-Melody mel_5 = {{NOTE_G4}, {750}, 1};
-Melody mel_6 = {{NOTE_A5}, {750}, 1};
-Melody mel_7 = {{NOTE_B5}, {750}, 1};
-Melody mel_8 = {{NOTE_C5}, {750}, 1};
-Melody mel_9 = {{NOTE_D4}, {750}, 1};
-
-// play to stop current melody
-Melody mel_0 = {};
 // Play Melodies
 
 Melody mel_active = {};
@@ -105,25 +90,22 @@ void init_melody(Melody mel){
   next_note_time = 0;
   current_note = 0;
   
-  //IrReceiver.stop();
+  IrReceiver.stop();
 }
 
 #define SPEAKER_PIN 8
 void play_melody(){
+  long current_time = millis();
+  if(current_time < next_note_time) return;
+  
   if(current_note <= mel_active.number_of_notes){
-    int current_time = millis();
-    
-    if(current_time >= next_note_time){
-      //tone(8, mel_active.notes[current_note]);
-      next_note_time = current_time + mel_active.lengths[current_note];
-      current_note ++;
-    }
-    
+    tone(SPEAKER_PIN, mel_active.notes[current_note]);
+    next_note_time = current_time + mel_active.lengths[current_note];
+    current_note ++;
   }
   else{
-    int pin = SPEAKER_PIN;
-    //noTone(pin);
-    //IrReceiver.start();
+    noTone(SPEAKER_PIN);
+    IrReceiver.start();
   }
 }
 
@@ -148,29 +130,35 @@ void readIR(){
   // Trigger when down
   //  set ir_value to 0 to trigger only on down
   if(ir_results.value != IR_REDO && ir_results.value != 0){
-    Serial.println(ir_results.value);
+    
     ir_value = ir_results.value;
   }
   else if (ir_results.value == 0){
     ir_value = 0;
   }
-  /*
-  // Trigger on click only
-  if(ir_results.value != IR_REDO && ir_results.value != 0){
-    ir_value = ir_results.value;
-  }
-  else{
-    ir_value = 0;
-  }
-  */
   
   ir_results.value = 0;
+
+
+  // play tones for user feedback
+  if(ir_value == IR_POWER ||
+     ir_value == 0) return;
+
+  if(ir_value == IR_FOUR ||
+     ir_value == IR_TWO ||
+     ir_value == IR_SIX ||
+     ir_value == IR_EIGHT ||
+     ir_value == IR_PLAY){
+     init_melody(mel_ping);
+     return;
+  }
+  else{
+    init_melody(mel_error);
+     return;
+  }
 }
 
 // ----------------------------- SERVOS ----------------------------- //
-
-int Neck_Position = 280;
-
 
 // Parameters
 const RobotState lower_limit = {{470, 90, 120}, {90, 470, 400}, {90, 470, 380}, {470, 90, 120}, 280};
@@ -183,40 +171,77 @@ const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 RobotState cfg_active = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 
 
+const RobotState cfg_start = {{1024, 1024, 0}, {1024, 1024, 0}, {1024, 1024, 0}, {1024, 1024, 0}, 512};
+const RobotState cfg_awake = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}, 512};
+const RobotState cfg_sleep = {{1024, 1024, 0}, {1024, 1024, 0}, {1024, 1024, 0}, {1024, 1024, 0}, 512};
 
+// Animation 
 
-// Animation Data
+  // awake
+const RobotState cfg_wake_up_1 = {{1024, 1024, 512}, {1024, 1024, 512}, {1024, 1024, 512}, {1024, 1024, 512}, 512};
+const RobotState cfg_wake_up_2 = {{512, 1024, 512},  {512, 1024, 512},  {512, 1024, 512},  {512, 1024, 512},  512};
+const Animation anim_awake = {{cfg_start, cfg_wake_up_1, cfg_wake_up_2, cfg_awake}, {100, 200, 200, 200}, 4, false};
 
-  // start
-RobotState cfg_start = {{512, 512, 512}, {312, 712, 512}, {712, 712, 512}, {512, 512, 512}, 280};
-Animation anim_start = {{cfg_start}, {0}, 1, false};
+ // sleep
+const Animation anim_sleep = {{cfg_awake, cfg_wake_up_2, cfg_wake_up_1,  cfg_sleep}, {200, 200, 200, 100}, 4, false};
 
- // end
+const Animation anim_stand = {{cfg_awake}, {0}, 1, false};
 
+  // walk f/b
+//const RobotState anim_walk_fwd_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 512};
+//const RobotState anim_walk_fwd_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 512}; 
+//const RobotState anim_walk_fwd_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 512}; 
+//const RobotState anim_walk_fwd_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 512}; 
 
-  // walk
-RobotState anim_walk_1 = {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280};
-RobotState anim_walk_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
-RobotState anim_walk_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
-RobotState anim_walk_4 = {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
+const Animation anim_walk_fwd = {{{{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 512}, 
+                                  {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 512}, 
+                                  {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 512}, 
+                                  {{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 512}}, 
+                                 {200, 200, 200, 200}, 4, true};
+                                 
+const Animation anim_walk_bwd = {{{{512, 512, 512}, {712, 512, 512}, {512, 712, 512}, {712, 512, 512}, 512},
+                                  {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 512, 512}, 512}, 
+                                  {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 512}, 
+                                  {{712, 712, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 512}}, 
+                                 {200, 200, 200, 200}, 4, true};
 
-Animation anim_walk = {{anim_walk_1, anim_walk_2, anim_walk_3, anim_walk_4}, {200, 200, 200, 200}, 4, true};
+  // walk l/r
+const RobotState anim_walk_lft_1 = {{312, 712, 512}, {512, 512, 512}, {512, 512, 512}, {312, 512, 512}, 512};
+const RobotState anim_walk_lft_2 = {{312, 512, 512}, {512, 512, 512}, {312, 512, 512}, {512, 712, 512}, 512}; 
+const RobotState anim_walk_lft_3 = {{512, 512, 512}, {312, 712, 512}, {312, 512, 512}, {512, 512, 512}, 512}; 
+RobotState anim_walk_lft_4 = {{512, 512, 512}, {312, 512, 512}, {512, 712, 512}, {312, 512, 512}, 512}; 
 
-  // pace
-RobotState anim_pace_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 280};
-RobotState anim_pace_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
-RobotState anim_pace_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}, 280}; 
-RobotState anim_pace_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
+const Animation anim_walk_lft = {{anim_walk_lft_1, anim_walk_lft_2, anim_walk_lft_3, anim_walk_lft_4}, {200, 200, 200, 200}, 4, true};
+const Animation anim_walk_rht = {{anim_walk_lft_4, anim_walk_lft_3, anim_walk_lft_2, anim_walk_lft_1}, {200, 200, 200, 200}, 4, true};
 
-Animation anim_pace = {{anim_pace_1, anim_pace_2, anim_pace_3, anim_pace_4}, {100, 100, 100, 100}, 4, true};
+  // pace f/b
+const RobotState anim_pace_fwd_1 = {{712, 712, 512}, {512, 512, 512}, {712, 512, 512}, {512, 712, 512}, 512};
+const RobotState anim_pace_fwd_2 = {{712, 512, 512}, {512, 512, 512}, {712, 512, 512}, {512, 512, 512}, 512}; 
+const RobotState anim_pace_fwd_3 = {{512, 512, 512}, {712, 712, 512}, {512, 712, 512}, {712, 512, 512}, 512}; 
+const RobotState anim_pace_fwd_4 = {{512, 512, 512}, {712, 512, 512}, {512, 512, 512}, {712, 512, 512}, 512}; 
 
+const Animation anim_pace_fwd = {{anim_pace_fwd_1, anim_pace_fwd_2, anim_pace_fwd_3, anim_pace_fwd_4}, {100, 100, 100, 100}, 4, true};
+const Animation anim_pace_bwd = {{anim_pace_fwd_4, anim_pace_fwd_3, anim_pace_fwd_2, anim_pace_fwd_1}, {100, 100, 100, 100}, 4, true};
+
+  // pace f/b
+const RobotState anim_pace_lft_1 = {{312, 712, 512}, {512, 512, 512}, {312, 512, 512}, {512, 712, 512}, 512};
+const RobotState anim_pace_lft_2 = {{312, 512, 512}, {512, 512, 512}, {312, 512, 512}, {512, 512, 512}, 512}; 
+const RobotState anim_pace_lft_3 = {{512, 512, 512}, {312, 712, 512}, {512, 712, 512}, {312, 512, 512}, 512}; 
+const RobotState anim_pace_lft_4 = {{512, 512, 512}, {312, 512, 512}, {512, 512, 512}, {312, 512, 512}, 512}; 
+
+const Animation anim_pace_lft = {{anim_pace_lft_1, anim_pace_lft_2, anim_pace_lft_3, anim_pace_lft_4}, {100, 100, 100, 100}, 4, true};
+const Animation anim_pace_rht = {{anim_pace_lft_4, anim_pace_lft_3, anim_pace_lft_2, anim_pace_lft_1}, {100, 100, 100, 100}, 4, true};
+
+/* 
+ *  Doesn't work with tetra
   // trot
-RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}, 280};
-RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 280}; 
-RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}, 280}; 
-RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}, 280}; 
+RobotState anim_trot_1 = {{712, 712, 512}, {512, 512, 512}, {512, 712, 512}, {712, 512, 512}, 512};
+RobotState anim_trot_2 = {{712, 512, 512}, {512, 512, 512}, {512, 512, 512}, {712, 512, 512}, 512}; 
+RobotState anim_trot_3 = {{512, 512, 512}, {712, 712, 512}, {712, 512, 512}, {512, 712, 512}, 512}; 
+RobotState anim_trot_4 = {{512, 512, 512}, {712, 512, 512}, {712, 512, 512}, {512, 512, 512}, 512}; 
 
 Animation anim_trot = {{anim_trot_1, anim_trot_2, anim_trot_3, anim_trot_4}, {50, 50, 50, 50}, 4, true};
+*/
 
 // Play Animations
 
@@ -225,11 +250,9 @@ int current_frame = 0;
 int next_frame_time = 0;
 
 void init_animation(Animation new_animation){
-  Serial.println();
   anim_active = new_animation;
   current_frame = 0;
   next_frame_time = 0;
-  Serial.println("init anim");
 }
 
 void play_animation(){
@@ -238,7 +261,7 @@ void play_animation(){
     }
   if(current_frame < anim_active.number_of_frames){
     
-    int current_time = millis();
+    long current_time = millis();
     if(current_time >= next_frame_time){
       cfg_active.LeftFront  = anim_active.frames[current_frame].LeftFront;
       cfg_active.RightFront = anim_active.frames[current_frame].RightFront;
@@ -258,7 +281,6 @@ void play_animation(){
 
 void setup() {
   Serial.begin(9600);
-Serial.println("Started");
   pwm.begin();
   pwm.setOscillatorFrequency(27000000);
   pwm.setPWMFreq(SERVO_FREQ);
@@ -267,12 +289,10 @@ Serial.println("Started");
   irrecv.blink13(true);
 
   Serial.println("Started");
-  //Serial.println(start_up_melody[0].duration);
-  //initalize_melody(start_up_melody);
+
 
   cfg_active = cfg_start;
-  
-  //SetAnimation(anim_start);
+ 
 }
 
 
@@ -280,52 +300,23 @@ Serial.println("Started");
 
 
 String command = "";
-long state = SLEEP;
-void loop() {
-  /*
-  if(Serial.available()){
-    command = Serial.readStringUntil(' ');
-    command.trim();
-    Serial.print("Command recived: ");
-    Serial.println(command);
-    if(command.startsWith("move")){
-      String leg = Serial.readStringUntil(' ');
-      int rotate = Serial.readStringUntil(' ').toInt();
-      int lift = Serial.readStringUntil(' ').toInt();
-      int kick = Serial.readStringUntil(' ').toInt();
-     
-      //set_leg(leg, rotate, lift, kick);
-    }
-    else if(command.startsWith("set")){
-      int id = Serial.readStringUntil(' ').toInt();
-      int freq = Serial.readStringUntil(' ').toInt();
+long state = SLEEP_LOOP;
 
-      Serial.println("Moving " + String(id) + " to " + String(freq));
-      //write_servo(id, freq);
-    }
-    else if(command.startsWith("config")){
-      String config_mode = Serial.readStringUntil(' ');
-      config_mode.trim();
-      if(config_mode == "start"){
-        Serial.println("Going to start config");
-        cfg_active = cfg_start;
-      }
-      else if(config_mode == "big"){
-        cfg_active = cfg_big;
-      }
-      
-    }
-  }
-  */
+#define DIRECTION_FORWARD 0
+#define DIRECTION_BACKWARD 1
+#define DIRECTION_LEFT 2
+#define DIRECTION_RIGHT 3
+int dir = DIRECTION_FORWARD;
+void loop() {
   //Serial.println(state);
   // STATE MACHINE
   // ----  SLEEP  ---- //
   if(state == SLEEP){
     state = SLEEP_LOOP;
     
-    init_animation(anim_start);
+    init_animation(anim_sleep);
     init_melody(mel_sleep);
-    Serial.println("sleep");
+    Serial.println("STATUS - SLEEP");
   }
   else if(state == SLEEP_LOOP){
     // EXIT CASES
@@ -336,10 +327,10 @@ void loop() {
   
   // ----  AWAKE  ---- //
   else if(state == AWAKE){
-    init_animation(anim_start);
+    init_animation(anim_awake);
     state = AWAKE_LOOP;
     init_melody(mel_awake);
-    Serial.println("awake");
+    Serial.println("STATUS - AWAKE");
   }
   else if(state == AWAKE_LOOP){
     // EXIT CASES
@@ -349,62 +340,139 @@ void loop() {
     else if(ir_value == IR_PLAY){
       state = WALK;
     }
+    else if(ir_value == IR_TWO){
+      dir = DIRECTION_FORWARD;
+    }
+    else if(ir_value == IR_EIGHT){
+      dir = DIRECTION_BACKWARD;
+    }
+    else if(ir_value == IR_FOUR){
+      dir = DIRECTION_LEFT;
+    }
+    else if(ir_value == IR_SIX){
+      dir = DIRECTION_RIGHT;
+    }
   }
   
   // ----  WALK  ---- //
   else if(state == WALK){
-    init_animation(anim_walk);
+    
     state = WALK_LOOP;
     
-    Serial.println("walk");
+    Serial.println("STATUS - WALKING");
+  
+    switch(dir){
+      case DIRECTION_FORWARD:
+        init_animation(anim_walk_fwd);
+        break;
+      case DIRECTION_BACKWARD:
+        init_animation(anim_walk_bwd);
+        break;
+      case DIRECTION_LEFT:
+        init_animation(anim_walk_lft);
+        break;
+      case DIRECTION_RIGHT:
+        init_animation(anim_walk_rht);
+        break;
+    }
   }
   else if(state == WALK_LOOP){
     
     // IR FUNCTIONS + EXIT CASES
     if(ir_value == IR_FFWD){
+      init_melody(mel_ping);
       state = PACE;
     }
     else if(ir_value == IR_RWD){
-      // PLAY ERROR SOUND
+      init_melody(mel_error);
     }
     else if(ir_value == IR_POWER){
       state = SLEEP;
     }
     else if(ir_value == IR_PLAY){
-      state = AWAKE;
+      init_animation(anim_stand);
+      Serial.println("STATUS - STANDING");
+      state = AWAKE_LOOP;
+    }
+    else if(ir_value == IR_TWO){
+      dir = DIRECTION_FORWARD;
+      state = WALK;
+    }
+    else if(ir_value == IR_EIGHT){
+      dir = DIRECTION_BACKWARD;
+      state = WALK;
+    }
+    else if(ir_value == IR_FOUR){
+      dir = DIRECTION_LEFT;
+      state = WALK;
+    }
+    else if(ir_value == IR_SIX){
+      dir = DIRECTION_RIGHT;
+      state = WALK;
     }
   }
   
   // ----  PACE  ---- //
   else if(state == PACE){
-    init_animation(anim_pace);
+    switch(dir){
+      case DIRECTION_FORWARD:
+        init_animation(anim_pace_fwd);
+        break;
+      case DIRECTION_BACKWARD:
+        init_animation(anim_pace_bwd);
+        break;
+      case DIRECTION_LEFT:
+        init_animation(anim_pace_lft);
+        break;
+      case DIRECTION_RIGHT:
+        init_animation(anim_pace_rht);
+        break;
+    }
+    
     state = PACE_LOOP;
-    Serial.println("pace");
+    Serial.println("STATUS - PACING");
   }
   else if(state == PACE_LOOP){
     // IR FUNCTIONS + EXIT CASES
     if(ir_value == IR_RWD){
-      //Serial.println("going back");
+      init_melody(mel_ping);
       state = WALK;
     }
     else if(ir_value == IR_FFWD){
-      // PLAY ERROR SOUND
+      init_melody(mel_error);
     }
     else if(ir_value == IR_POWER){
       state = SLEEP;
     }
     else if(ir_value == IR_PLAY){
-      state = AWAKE;
+      Serial.println("STATUS - STANDING");
+      init_animation(anim_stand);
+      state = AWAKE_LOOP;
+    }
+    else if(ir_value == IR_TWO){
+      dir = DIRECTION_FORWARD;
+      state = PACE;
+    }
+    else if(ir_value == IR_EIGHT){
+      dir = DIRECTION_BACKWARD;
+      state = PACE;
+    }
+    else if(ir_value == IR_FOUR){
+      dir = DIRECTION_LEFT;
+      state = PACE;
+    }
+    else if(ir_value == IR_SIX){
+      dir = DIRECTION_RIGHT;
+      state = PACE;
     }
   }
   
   play_animation();
   write_servos();
   readIR();
-  //Serial.println(ir_value);
   //print_robot_state();
   play_melody();
-  delay(200);
+  delay(20);
 }
 
 //https://arduino.stackexchange.com/questions/1013/how-do-i-split-an-incoming-string
