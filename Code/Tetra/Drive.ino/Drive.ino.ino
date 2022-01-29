@@ -1,13 +1,10 @@
 #include <Arduino.h>
 
-#define IR_USE_TIMER3
 #include <IRremote.h>
 #include <Servo.h>
 
 #include <Wire.h>
-
 #include <Adafruit_PWMServoDriver.h>
-
 
 #include <math.h>
 
@@ -15,6 +12,7 @@
 #include "types.h"
 #include "pitches.h"
 
+// Servo IDs
 #define ID_Rotator_LF 0
 #define ID_Lift_LF    1
 #define ID_Kick_LF    2
@@ -33,6 +31,13 @@
 
 #define ID_Neck 15
 
+// directions
+#define DIRECTION_FORWARD 0
+#define DIRECTION_BACKWARD 1
+#define DIRECTION_LEFT 2
+#define DIRECTION_RIGHT 3
+
+// Loop states
 const int SLEEP =  1;
 const int SLEEP_LOOP = 2;
 const int AWAKE = 3;
@@ -44,10 +49,12 @@ const int PACE_LOOP  = 8;
 
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
-
 #define SERVO_FREQ 50
 
-/* PIN LAYOUT
+
+/*  NOTES
+ *  ------------------------
+ *  PIN LAYOUT
  * 
  * I2C
  *  - SDA : A4
@@ -89,21 +96,27 @@ void init_melody(Melody mel){
   mel_active = mel;
   next_note_time = 0;
   current_note = 0;
-  
+
+  // Stop ir to avoid interferance 
   IrReceiver.stop();
 }
 
 #define SPEAKER_PIN 8
 void play_melody(){
+  // If the current note duration has not expired
   long current_time = millis();
   if(current_time < next_note_time) return;
-  
+
   if(current_note <= mel_active.number_of_notes){
+    // Play the next note
     tone(SPEAKER_PIN, mel_active.notes[current_note]);
+
+    // Set the next note index and time
     next_note_time = current_time + mel_active.lengths[current_note];
     current_note ++;
   }
   else{
+    // stop tone and restart IR
     noTone(SPEAKER_PIN);
     IrReceiver.start();
   }
@@ -124,11 +137,15 @@ long last_ir_value = 0;
 long ir_value = 0;
 
 void readIR(){
+  // get the ir value then resume to let it receive the next one
   irrecv.decode(&ir_results);
   irrecv.resume();
   
-  // Trigger when down
-  //  set ir_value to 0 to trigger only on down
+  /* Trigger when button is clicked down
+   *   ir_values stores the value of the ir receiver
+   *   Each button has a unique value (listed in buttons.h)
+   *   the value clears after 1 loop iteration  
+   */
   if(ir_results.value != IR_REDO && ir_results.value != 0){
     
     ir_value = ir_results.value;
@@ -136,7 +153,7 @@ void readIR(){
   else if (ir_results.value == 0){
     ir_value = 0;
   }
-  
+
   ir_results.value = 0;
 
 
@@ -167,9 +184,7 @@ const RobotState upper_limit = {{90, 470, 400}, {470, 90, 120}, {470, 90, 140}, 
 const RobotState fine_offset = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
 
 // Configurations
-
 RobotState cfg_active = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0};
-
 
 const RobotState cfg_start = {{1024, 1024, 0}, {1024, 1024, 0}, {1024, 1024, 0}, {1024, 1024, 0}, 512};
 const RobotState cfg_awake = {{512, 512, 512}, {512, 512, 512}, {512, 512, 512}, {512, 512, 512}, 512};
@@ -256,18 +271,25 @@ void init_animation(Animation new_animation){
 }
 
 void play_animation(){
+  // Loop back to frame 0 if this is a looping animation
   if(anim_active.is_looping && current_frame >= anim_active.number_of_frames){
       current_frame = 0; 
     }
+
+  // If there are more frames to be played
   if(current_frame < anim_active.number_of_frames){
-    
+
+    // If the current frame's duration has ended
     long current_time = millis();
     if(current_time >= next_frame_time){
+
+      // Set the active configuration to the frame data
       cfg_active.LeftFront  = anim_active.frames[current_frame].LeftFront;
       cfg_active.RightFront = anim_active.frames[current_frame].RightFront;
       cfg_active.LeftBack   = anim_active.frames[current_frame].LeftBack;
       cfg_active.RightBack  = anim_active.frames[current_frame].RightBack;
-      
+
+      // Set the next frame index and time
       next_frame_time = current_time + anim_active.lengths[current_frame];
       current_frame ++;
     }
@@ -290,9 +312,7 @@ void setup() {
 
   Serial.println("Started");
 
-
   cfg_active = cfg_start;
- 
 }
 
 
@@ -302,13 +322,8 @@ void setup() {
 String command = "";
 long state = SLEEP_LOOP;
 
-#define DIRECTION_FORWARD 0
-#define DIRECTION_BACKWARD 1
-#define DIRECTION_LEFT 2
-#define DIRECTION_RIGHT 3
 int dir = DIRECTION_FORWARD;
 void loop() {
-  //Serial.println(state);
   // STATE MACHINE
   // ----  SLEEP  ---- //
   if(state == SLEEP){
@@ -470,7 +485,6 @@ void loop() {
   play_animation();
   write_servos();
   readIR();
-  //print_robot_state();
   play_melody();
   delay(20);
 }
@@ -506,6 +520,7 @@ void print_robot_state(){
 // ----------------------------- SERVO CONTROL ----------------------------- // 
 
 void set_leg(String leg, int Rotator, int Lift, int Kick){
+  // set the leg state in cfg_active
   if(leg == "LF") {
       cfg_active.LeftFront = {Rotator, Lift, Kick};
   }
@@ -522,15 +537,16 @@ void set_leg(String leg, int Rotator, int Lift, int Kick){
       Serial.println("Bad Input");
   }
   
-
   print_robot_state();
 }
 
 void write_servo(int id, int freq){
+  // set the pwm for 1 servo
   pwm.setPWM(id, 0, freq);
 }
 
 void write_servos(){
+  // set the pwm for each servo
   pwm.setPWM(ID_Rotator_LF, 0, map(cfg_active.LeftFront.Rotator + fine_offset.LeftFront.Rotator, 0, 1024,   lower_limit.LeftFront.Rotator,  upper_limit.LeftFront.Rotator));
   pwm.setPWM(ID_Lift_LF,    0, map(cfg_active.LeftFront.Lift    + fine_offset.LeftFront.Lift, 0, 1024,      lower_limit.LeftFront.Lift,     upper_limit.LeftFront.Lift   ));
   pwm.setPWM(ID_Kick_LF,    0, map(cfg_active.LeftFront.Kick    + fine_offset.LeftFront.Kick, 0, 1024,      lower_limit.LeftFront.Kick,     upper_limit.LeftFront.Kick   ));

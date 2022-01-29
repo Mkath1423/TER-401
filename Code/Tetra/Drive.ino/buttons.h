@@ -1,3 +1,4 @@
+// IR button values
 #define IR_POWER 16753245
 #define IR_MODE  16736925
 #define IR_MUTE  16769565

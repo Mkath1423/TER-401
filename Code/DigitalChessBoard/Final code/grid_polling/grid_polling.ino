@@ -6,7 +6,6 @@ const int signal_pins[5] = {A1, A2, A3, A4, A5};
 const int n_cols = 2;
 const int n_rows = 5;
 
-
 String board[64] = {};
 
 void setup() {
@@ -25,34 +24,30 @@ String command;
 int active_column = 0;
 void loop() {
   if(Serial.available()){
+    // read incoming command
     command = Serial.readString();
-    //Serial.println(command);
     if(command.startsWith("rb")){
-      //Serial.println("Reading Board");
-      //Serial.println("-------------");
+      // read the sensors and write the readings
       CheckBoard();
     }
     else if(command.startsWith("echo")){
+      // write echo (used for serial warm up)
       Serial.println("echo");
     }
     else if(command.startsWith("sb")){
-     // Serial.println("Sending New Position");
-       // transmit to device #4
+      // send light changes to the light handler
       String changes = command.substring(3);
-      //Serial.println(changes);
+
+     // parse data into CharArray
       char * buf;
       buf = (char *)malloc(changes.length()+1);
       changes.toCharArray(buf, changes.length()+1);
+
       
-      //Serial.println(buf);
-      for(int i = 0; i != changes.length(); i++){
-        
-        //Serial.println(buf[i]);
-      }
-      
+       // transmit to device #4
       Wire.beginTransmission(4);
-      Wire.write(buf);   // sends one byte  
-      Wire.endTransmission();    // stop transmitting
+      Wire.write(buf); 
+      Wire.endTransmission();
     }
     
     command = "";
@@ -64,8 +59,10 @@ void loop() {
 void CheckBoard(){
   String out = "";
   for(int i = 0; i != n_cols; i++){
-    
+    // give power to one column
     SetColumnPower(i);
+    
+    // read data from each sensor in the column
     for(int i = 0; i != n_rows; i++){
       out += String(analogRead(signal_pins[i]) < 100) + " ";
     }
